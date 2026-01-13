@@ -44,20 +44,26 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Content - use id to prevent unnecessary redraws
-            Group {
-                switch currentTab {
-                case .log:
-                    DashboardView()
-                case .insights:
-                    StatisticsView()
-                case .transactions:
-                    NavigationStack {
-                        TransactionListView()
-                    }
-                case .settings:
-                    SettingsView()
+            // Content - All views are always in memory but hidden
+            // This prevents lag when switching tabs
+            ZStack {
+                DashboardView()
+                    .opacity(currentTab == .log ? 1 : 0)
+                    .zIndex(currentTab == .log ? 1 : 0)
+                
+                StatisticsView()
+                    .opacity(currentTab == .insights ? 1 : 0)
+                    .zIndex(currentTab == .insights ? 1 : 0)
+                
+                NavigationStack {
+                    TransactionListView()
                 }
+                .opacity(currentTab == .transactions ? 1 : 0)
+                .zIndex(currentTab == .transactions ? 1 : 0)
+                
+                SettingsView()
+                    .opacity(currentTab == .settings ? 1 : 0)
+                    .zIndex(currentTab == .settings ? 1 : 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
@@ -96,6 +102,8 @@ struct MainTabView: View {
     
     // MARK: - Liquid Glass Tab Bar
     
+    @Environment(\.colorScheme) private var colorScheme
+    
     private var liquidGlassTabBar: some View {
         HStack(spacing: 4) {
             // Left tabs
@@ -112,7 +120,7 @@ struct MainTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
         .background {
-            // Liquid Glass Background
+            // Liquid Glass Background - Adaptive
             ZStack {
                 // Layer 1: Ultra thin material for glass blur
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -122,9 +130,12 @@ struct MainTabView: View {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [
+                            colors: colorScheme == .dark ? [
                                 Color.white.opacity(0.1),
                                 Color.white.opacity(0.02)
+                            ] : [
+                                Color.black.opacity(0.03),
+                                Color.black.opacity(0.01)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -135,9 +146,13 @@ struct MainTabView: View {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [
+                            colors: colorScheme == .dark ? [
                                 Color.white.opacity(0.25),
                                 Color.white.opacity(0.08),
+                                Color.clear
+                            ] : [
+                                Color.white.opacity(0.9),
+                                Color.white.opacity(0.5),
                                 Color.clear
                             ],
                             startPoint: .top,
@@ -149,11 +164,16 @@ struct MainTabView: View {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
-                            colors: [
+                            colors: colorScheme == .dark ? [
                                 Color.white.opacity(0.35),
                                 Color.white.opacity(0.12),
                                 Color.white.opacity(0.08),
                                 Color.white.opacity(0.2)
+                            ] : [
+                                Color.black.opacity(0.08),
+                                Color.black.opacity(0.04),
+                                Color.black.opacity(0.02),
+                                Color.black.opacity(0.06)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -162,8 +182,8 @@ struct MainTabView: View {
                     )
             }
             // Outer shadow for floating effect
-            .shadow(color: Color.black.opacity(0.3), radius: 20, y: 10)
-            .shadow(color: Color.black.opacity(0.15), radius: 5, y: 2)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.12), radius: 20, y: 10)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.15 : 0.05), radius: 5, y: 2)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
@@ -191,7 +211,7 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
-            .foregroundStyle(currentTab == tab ? OGDesign.Colors.textPrimary : Color.white.opacity(0.5))
+            .foregroundStyle(currentTab == tab ? OGDesign.Colors.textPrimary : OGDesign.Colors.textSecondary)
             .animation(.easeInOut(duration: 0.15), value: currentTab)
         }
         .buttonStyle(TabPressStyle())
@@ -204,13 +224,13 @@ struct MainTabView: View {
             // Outer pulse animation
             if animate {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(OGDesign.Colors.glassBorder)
                     .frame(width: 85, height: 58)
                     .opacity(animate ? 0 : 1)
                     .scaleEffect(animate ? 1 : 0.5)
                 
                 RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                    .fill(OGDesign.Colors.glassHighlight)
                     .frame(width: 70, height: 46)
                     .opacity(animate ? 0 : 1)
                     .scaleEffect(animate ? 1 : 0.7)
@@ -225,13 +245,13 @@ struct MainTabView: View {
                     .foregroundStyle(OGDesign.Colors.textPrimary)
                     .frame(width: 56, height: 34)
                     .background {
-                        // Glass button background
+                        // Glass button background - adaptive
                         ZStack {
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .fill(Color.white.opacity(0.12))
+                                .fill(OGDesign.Colors.glassHighlight)
                             
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
+                                .strokeBorder(OGDesign.Colors.glassBorder, lineWidth: 0.5)
                         }
                     }
             }
