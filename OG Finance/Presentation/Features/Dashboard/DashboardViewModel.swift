@@ -106,8 +106,11 @@ final class DashboardViewModel {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.refresh()
+            // Instant refresh using DispatchQueue.main.async (like DIME)
+            DispatchQueue.main.async {
+                Task { @MainActor in
+                    await self?.refresh()
+                }
             }
         }
     }

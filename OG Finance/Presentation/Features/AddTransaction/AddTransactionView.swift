@@ -782,10 +782,15 @@ struct AddTransactionView: View {
                 )
                 
                 print("✅ Transaction saved successfully!")
-                
+
                 await MainActor.run {
                     onSave()
                     dismiss()
+
+                    // Post notification AFTER all UI state transitions are complete
+                    // This prevents race conditions with DashboardViewModel refreshing
+                    // while the transaction sheet is still being dismissed
+                    TransactionNotificationCenter.shared.postTransactionAdded()
                 }
             } catch {
                 print("❌ Save Failed: \(error)")

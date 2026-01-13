@@ -626,11 +626,7 @@ struct InsightsBarChartView: View {
     private func shouldShowLabel(_ index: Int) -> Bool {
         switch type {
         case 1: return true
-        case 2:
-            // Show labels for day 1, 7, 14, 21, 28 and last day
-            let calendar = Calendar.current
-            let day = calendar.component(.day, from: dates[index])
-            return day == 1 || day == 7 || day == 14 || day == 21 || day == 28 || index == dates.count - 1
+        case 2: return false  // No labels for month view (bars only, like week/year)
         case 3: return [0, 3, 6, 9].contains(index)
         default: return false
         }

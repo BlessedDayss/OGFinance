@@ -50,7 +50,6 @@ struct SettingsCurrencyView: View {
         ("PHP", "Philippine Peso", "₱"),
         ("MYR", "Malaysian Ringgit", "RM"),
         ("COP", "Colombian Peso", "$"),
-        ("RUB", "Russian Ruble", "₽"),
         ("RON", "Romanian Leu", "lei"),
         ("PEN", "Peruvian Sol", "S/"),
         ("AZN", "Azerbaijani Manat", "₼"),
