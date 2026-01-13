@@ -144,6 +144,9 @@ final class AddTransactionViewModel {
             didSave = true
             HapticManager.shared.success()
             
+            // Post notification for real-time updates
+            TransactionNotificationCenter.shared.postTransactionAdded()
+            
         } catch {
             self.error = error
             HapticManager.shared.error()

@@ -40,6 +40,13 @@ struct StatisticsView: View {
         .task {
             await loadTransactions()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .transactionsChanged)) { _ in
+            // Refresh data when transactions change
+            Task {
+                await loadTransactions()
+                refreshID = UUID()
+            }
+        }
     }
     
     private var emptyStateView: some View {
@@ -677,10 +684,12 @@ struct InsightsBarChartView: View {
     }
 }
 
-// MARK: - Animated Bar View
+// MARK: - Animated Bar View (DIME-style animation)
 
 struct AnimatedBarView: View {
     let index: Int
+    
+    @AppStorage("animatedCharts") private var animatedCharts: Bool = true
     @State private var showBar = false
     
     var body: some View {
@@ -692,8 +701,21 @@ struct AnimatedBarView: View {
                 .frame(height: showBar ? nil : 0, alignment: .bottom)
         }
         .onAppear {
-            withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.8, blendDuration: 0.8).delay(Double(index) * 0.05)) {
-                showBar = true
+            // Reset for animation
+            showBar = false
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                if !animatedCharts {
+                    showBar = true
+                } else {
+                    // DIME-style spring animation with staggered delay
+                    withAnimation(
+                        .interactiveSpring(response: 0.6, dampingFraction: 0.8, blendDuration: 0.8)
+                        .delay(Double(index) * 0.04)
+                    ) {
+                        showBar = true
+                    }
+                }
             }
         }
     }

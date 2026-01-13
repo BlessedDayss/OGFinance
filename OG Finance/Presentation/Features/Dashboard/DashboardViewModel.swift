@@ -79,6 +79,9 @@ final class DashboardViewModel {
         self.accountRepository = accountRepository
         self.categoryRepository = categoryRepository
         self.getStatisticsUseCase = getStatisticsUseCase
+        
+        // Subscribe to transaction changes for real-time updates
+        setupNotificationObservers()
     }
     
     /// Convenience initializer using DependencyContainer
@@ -89,6 +92,24 @@ final class DashboardViewModel {
             categoryRepository: container.categoryRepository,
             getStatisticsUseCase: container.makeGetStatisticsUseCase()
         )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Notification Setup
+    
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            forName: .transactionsChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.refresh()
+            }
+        }
     }
     
     // MARK: - Public Methods

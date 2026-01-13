@@ -18,9 +18,9 @@ enum LiquidGlass {
         static let primary = Color(hex: "7367F0")
         static let secondary = Color(hex: "A8AAAE")
         
-        // Semantic (same for both modes)
-        static let income = Color(hex: "28C76F")
-        static let expense = Color(hex: "EA5455")
+        // Semantic - Adaptive (from OGDesign)
+        static let income = OGDesign.Colors.income
+        static let expense = OGDesign.Colors.expense
         static let warning = Color(hex: "FF9F43")
         
         // Backgrounds - Adaptive
@@ -38,24 +38,16 @@ enum LiquidGlass {
         static let textSecondary = OGDesign.Colors.textSecondary
         static let textTertiary = OGDesign.Colors.textTertiary
         
-        // Gradients
+        // Gradients - Adaptive
         static let primaryGradient = LinearGradient(
             colors: [primary, Color(hex: "9F44D3")],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
-        static let incomeGradient = LinearGradient(
-            colors: [Color(hex: "28C76F"), Color(hex: "48DA89")],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        static let incomeGradient = OGDesign.Colors.incomeGradient
         
-        static let expenseGradient = LinearGradient(
-            colors: [Color(hex: "EA5455"), Color(hex: "FF6B6B")],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        static let expenseGradient = OGDesign.Colors.expenseGradient
         
         // Mesh Gradient - Adaptive
         static var meshGradient: MeshGradient {

@@ -408,6 +408,9 @@ struct TransactionListView: View {
                 try await DependencyContainer.shared.makeDeleteTransactionUseCase().execute(id: transaction.id)
                 transactions.removeAll { $0.id == transaction.id }
                 HapticManager.shared.success()
+                
+                // Post notification for real-time updates
+                TransactionNotificationCenter.shared.postTransactionDeleted()
             } catch {
                 HapticManager.shared.error()
             }

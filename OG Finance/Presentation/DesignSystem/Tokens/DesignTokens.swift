@@ -21,9 +21,9 @@ enum OGDesign {
         static let primary = Color(hex: "7367F0")
         static let secondary = Color(hex: "A8AAAE")
         
-        // Semantic colors (Same for both modes)
-        static let income = Color(hex: "28C76F") // Emerald Green
-        static let expense = Color(hex: "EA5455") // Soft Red
+        // Semantic colors - Adaptive (like appDIME)
+        static let income = Color("IncomeGreen")
+        static let expense = Color("ExpenseRed")
         static let warning = Color(hex: "FF9F43") // Orange
         
         // Background colors - Adaptive
@@ -41,15 +41,15 @@ enum OGDesign {
         static let textSecondary = Color("TextSecondary")
         static let textTertiary = Color("TextTertiary")
         
-        // Gradients
+        // Gradients - use adaptive colors
         static let incomeGradient = LinearGradient(
-            colors: [Color(hex: "28C76F"), Color(hex: "48DA89")],
+            colors: [income, income.opacity(0.8)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
         static let expenseGradient = LinearGradient(
-            colors: [Color(hex: "EA5455"), Color(hex: "FF6B6B")],
+            colors: [expense, expense.opacity(0.8)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
