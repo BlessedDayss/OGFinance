@@ -708,13 +708,24 @@ struct LogEmojiView: View {
     let emoji: String
     let color: String
     
+    // Known SF Symbols without dots
+    private let sfSymbolsWithoutDots = [
+        "laptopcomputer", "desktopcomputer", "macbook", "iphone", "ipad",
+        "airpods", "homepod", "applewatch", "appletv", "airplane",
+        "car", "bus", "tram", "bicycle", "scooter", "figure"
+    ]
+    
+    private var isSFSymbol: Bool {
+        emoji.contains(".") || sfSymbolsWithoutDots.contains(emoji.lowercased())
+    }
+    
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Color(hex: color).opacity(0.73))
             
-            // Handle both SF Symbols (contain ".") and emojis
-            if emoji.contains(".") {
+            // Handle both SF Symbols and emojis
+            if isSFSymbol {
                 Image(systemName: emoji)
                     .font(.system(.title3))
                     .foregroundStyle(.white)
@@ -724,6 +735,31 @@ struct LogEmojiView: View {
             }
         }
         .frame(width: 44, height: 44)
+    }
+}
+
+// MARK: - Category Icon View (reusable)
+
+struct CategoryIconView: View {
+    let icon: String
+    
+    // Known SF Symbols without dots
+    private let sfSymbolsWithoutDots = [
+        "laptopcomputer", "desktopcomputer", "macbook", "iphone", "ipad",
+        "airpods", "homepod", "applewatch", "appletv", "airplane",
+        "car", "bus", "tram", "bicycle", "scooter", "figure"
+    ]
+    
+    private var isSFSymbol: Bool {
+        icon.contains(".") || sfSymbolsWithoutDots.contains(icon.lowercased())
+    }
+    
+    var body: some View {
+        if isSFSymbol {
+            Image(systemName: icon)
+        } else {
+            Text(icon)
+        }
     }
 }
 
@@ -773,14 +809,8 @@ struct LogCategoryStepperView: View {
                         ForEach(filteredCategories) { item in
                             HStack(spacing: 5) {
                                 // Handle both SF Symbols and emojis
-                                Group {
-                                    if item.icon.contains(".") {
-                                        Image(systemName: item.icon)
-                                    } else {
-                                        Text(item.icon)
-                                    }
-                                }
-                                .font(.system(.footnote, design: .rounded).weight(.medium))
+                                CategoryIconView(icon: item.icon)
+                                    .font(.system(.footnote, design: .rounded).weight(.medium))
                                 
                                 Text(item.name)
                                     .font(.system(.body, design: .rounded).weight(.medium))

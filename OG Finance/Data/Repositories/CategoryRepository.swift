@@ -191,13 +191,22 @@ actor CategoryRepository: CategoryRepositoryProtocol {
         var needsSave = false
         
         for entity in entities {
-            // Check if icon is an SF Symbol (contains ".")
-            if entity.icon.contains(".") {
+            // Check if icon needs migration:
+            // 1. Contains "." (SF Symbol with dots)
+            // 2. Is in our mapping (SF Symbols without dots like "laptopcomputer")
+            // 3. Is longer than 2 chars and not an emoji
+            let needsMigration = entity.icon.contains(".") || 
+                                 iconMapping[entity.icon] != nil ||
+                                 (entity.icon.count > 2 && !entity.icon.unicodeScalars.first!.properties.isEmoji)
+            
+            if needsMigration {
                 if let emojiIcon = iconMapping[entity.icon] {
+                    print("🔄 Migrating icon: \(entity.icon) → \(emojiIcon)")
                     entity.icon = emojiIcon
                     needsSave = true
-                } else {
-                    // Default fallback for unknown SF Symbols
+                } else if entity.icon.count > 2 && !entity.icon.unicodeScalars.first!.properties.isEmoji {
+                    // Unknown SF Symbol - use default
+                    print("⚠️ Unknown icon: \(entity.icon) → 📦")
                     entity.icon = "📦"
                     needsSave = true
                 }
@@ -206,6 +215,7 @@ actor CategoryRepository: CategoryRepositoryProtocol {
         
         if needsSave {
             try modelContext.save()
+            print("✅ Icon migration completed")
         }
     }
 }

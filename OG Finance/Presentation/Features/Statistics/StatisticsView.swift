@@ -15,6 +15,7 @@ struct StatisticsView: View {
     @AppStorage("chartTimeFrame") private var chartType = 2
     @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var refreshID = UUID()
+    @State private var hasAppeared = false
     
     private var chartTypeString: String {
         switch chartType {
@@ -26,43 +27,52 @@ struct StatisticsView: View {
     }
     
     var body: some View {
-        Group {
-            if transactions.isEmpty {
-                emptyStateView
-            } else {
-                mainContentView
+        ZStack {
+            // Static background for fast loading
+            OGDesign.Colors.backgroundPrimary
+                .ignoresSafeArea()
+            
+            Group {
+                if transactions.isEmpty {
+                    emptyStateView
+                } else {
+                    mainContentView
+                }
             }
         }
         .task {
             await loadTransactions()
+            withAnimation(.spring(duration: 0.3)) {
+                hasAppeared = true
+            }
         }
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 20) {
             Image(systemName: "chart.pie.fill")
                 .font(.system(size: 60))
                 .foregroundStyle(OGDesign.Colors.textTertiary)
-                .padding(.bottom, 20)
             
-            Text("Analyse Your Expenditure")
-                .font(.system(.title2, design: .rounded).weight(.medium))
-                .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.8))
-                .multilineTextAlignment(.center)
-            
-            Text("As transactions start piling up")
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(OGDesign.Colors.textSecondary.opacity(0.7))
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Analyse Your Expenditure")
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
+                    .foregroundStyle(OGDesign.Colors.textPrimary)
+                    .multilineTextAlignment(.center)
+                
+                Text("As transactions start piling up")
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .foregroundStyle(OGDesign.Colors.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, 30)
-        .frame(height: 250, alignment: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(OGDesign.Colors.backgroundPrimary)
     }
     
     private var mainContentView: some View {
         VStack(spacing: 5) {
+            // Header with glass effect
             HStack {
                 Text("Insights")
                     .font(.system(.title, design: .rounded).weight(.semibold))
@@ -70,6 +80,7 @@ struct StatisticsView: View {
                 
                 Spacer()
                 
+                // Glass time selector button
                 Button {
                     showTimeMenu = true
                 } label: {
@@ -80,10 +91,19 @@ struct StatisticsView: View {
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(.caption, design: .rounded).weight(.medium))
                     }
-                    .padding(3)
-                    .padding(.horizontal, 6)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
                     .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.9))
-                    .background(OGDesign.Colors.glassBorder, in: RoundedRectangle(cornerRadius: 6))
+                    .background {
+                        // Glass button
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                            
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
+                        }
+                    }
                 }
                 .confirmationDialog("Select Period", isPresented: $showTimeMenu) {
                     Button("Week") { chartType = 1; refreshID = UUID() }
@@ -94,20 +114,27 @@ struct StatisticsView: View {
             .padding(.horizontal, 30)
             .padding(.top, 20)
             .padding(.bottom, 20)
+            .offset(y: hasAppeared ? 0 : -20)
+            .opacity(hasAppeared ? 1 : 0)
             
             if chartType == 1 {
                 WeekGraphContentView(transactions: transactions)
                     .id(refreshID)
+                    .offset(y: hasAppeared ? 0 : 30)
+                    .opacity(hasAppeared ? 1 : 0)
             } else if chartType == 2 {
                 MonthGraphContentView(transactions: transactions)
                     .id(refreshID)
+                    .offset(y: hasAppeared ? 0 : 30)
+                    .opacity(hasAppeared ? 1 : 0)
             } else if chartType == 3 {
                 YearGraphContentView(transactions: transactions)
                     .id(refreshID)
+                    .offset(y: hasAppeared ? 0 : 30)
+                    .opacity(hasAppeared ? 1 : 0)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(OGDesign.Colors.backgroundPrimary)
     }
     
     private func loadTransactions() async {
@@ -384,7 +411,7 @@ struct InsightsDollarText: View {
     }
 }
 
-// MARK: - Insights Summary Block
+// MARK: - Insights Summary Block (Liquid Glass Style)
 
 struct InsightsSummaryBlock: View {
     let isIncome: Bool
@@ -407,18 +434,47 @@ struct InsightsSummaryBlock: View {
                     .lineLimit(1)
             }
             .foregroundStyle(color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
-            .background(color.opacity(showOverlay ? 0.2 : 0.1), in: RoundedRectangle(cornerRadius: 10))
-            .overlay {
-                if showOverlay {
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(color.opacity(0.5), lineWidth: 1.5)
+            .background {
+                ZStack {
+                    // Glass background
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    
+                    // Color tint overlay
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(color.opacity(showOverlay ? 0.15 : 0.08))
+                    
+                    // Gradient border
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    color.opacity(showOverlay ? 0.5 : 0.2),
+                                    color.opacity(showOverlay ? 0.3 : 0.1)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: showOverlay ? 1.5 : 0.8
+                        )
                 }
             }
+            // Glow effect when selected
+            .shadow(color: showOverlay ? color.opacity(0.3) : .clear, radius: 8, y: 0)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SummaryBlockButtonStyle())
+    }
+}
+
+struct SummaryBlockButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -577,20 +633,23 @@ struct InsightsBarChartView: View {
     private func shouldShowLabel(_ index: Int) -> Bool {
         switch type {
         case 1: return true
-        case 2: return [0, 7, 14, 21, 28].contains(index)
+        case 2: return index == 0 || (index + 1) % 7 == 0 || index == dates.count - 1
         case 3: return [0, 3, 6, 9].contains(index)
         default: return false
         }
     }
     
     private func getLabel(_ date: Date, index: Int) -> String {
-        let formatter = DateFormatter()
         switch type {
         case 1:
+            let formatter = DateFormatter()
             formatter.dateFormat = "EEE"
             return String(formatter.string(from: date).prefix(1))
         case 2:
-            return "\(index + 1)"
+            // Show the actual day of month
+            let calendar = Calendar.current
+            let day = calendar.component(.day, from: date)
+            return "\(day)"
         case 3:
             let monthNames = ["Jan", "Apr", "Jul", "Oct"]
             let monthIndex = [0, 3, 6, 9]
