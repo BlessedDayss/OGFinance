@@ -1,0 +1,277 @@
+//
+//  LiquidGlassStyle.swift
+//  NewOrioPlanner
+//
+//  Liquid Glass UI design system for iOS 26+.
+//
+
+import SwiftUI
+
+// MARK: - Design Tokens
+
+enum LiquidGlass {
+    
+    // MARK: - Colors (Synced with OGDesign)
+    
+    enum Colors {
+        // Primary
+        static let primary = Color(hex: "7367F0")
+        static let secondary = Color(hex: "A8AAAE")
+        
+        // Semantic
+        static let income = Color(hex: "28C76F")
+        static let expense = Color(hex: "EA5455")
+        static let warning = Color(hex: "FF9F43")
+        
+        // Backgrounds
+        static let backgroundPrimary = Color(hex: "0F1520")
+        static let backgroundSecondary = Color(hex: "161D29")
+        static let backgroundTertiary = Color(hex: "1D2536")
+        
+        // Glass
+        static let glassFill = Color(hex: "1D2536").opacity(0.4)
+        static let glassBorder = Color.white.opacity(0.08)
+        static let glassHighlight = Color.white.opacity(0.1)
+        
+        // Text
+        static let textPrimary = Color.white.opacity(0.95)
+        static let textSecondary = Color.white.opacity(0.7)
+        static let textTertiary = Color.white.opacity(0.4)
+        
+        // Gradients
+        static let primaryGradient = LinearGradient(
+            colors: [primary, Color(hex: "9F44D3")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        
+        static let incomeGradient = LinearGradient(
+            colors: [Color(hex: "28C76F"), Color(hex: "48DA89")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        
+        static let expenseGradient = LinearGradient(
+            colors: [Color(hex: "EA5455"), Color(hex: "FF6B6B")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        
+        // Mesh Gradient Background
+        static let meshGradient = MeshGradient(
+            width: 3, height: 3,
+            points: [
+                [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+                [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
+                [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+            ],
+            colors: [
+                Color(hex: "0F1520"), Color(hex: "161D29"), Color(hex: "1D2536"),
+                Color(hex: "161D29"), Color(hex: "1D2536"), Color(hex: "161D29"),
+                Color(hex: "1D2536"), Color(hex: "161D29"), Color(hex: "0F1520")
+            ]
+        )
+    }
+    
+    // MARK: - Spacing
+    
+    enum Spacing {
+        static let xxs: CGFloat = 4
+        static let xs: CGFloat = 8
+        static let sm: CGFloat = 12
+        static let md: CGFloat = 16
+        static let lg: CGFloat = 24
+        static let xl: CGFloat = 32
+        static let xxl: CGFloat = 48
+    }
+    
+    // MARK: - Radius
+    
+    enum Radius {
+        static let xs: CGFloat = 8
+        static let sm: CGFloat = 12
+        static let md: CGFloat = 16
+        static let lg: CGFloat = 24
+        static let xl: CGFloat = 32
+    }
+    
+    // MARK: - Typography
+    
+    enum Typography {
+        static let displayLarge = Font.system(size: 48, weight: .bold, design: .rounded)
+        static let displayMedium = Font.system(size: 36, weight: .bold, design: .rounded)
+        static let displaySmall = Font.system(size: 28, weight: .bold, design: .rounded)
+        
+        static let headlineLarge = Font.system(size: 24, weight: .semibold, design: .rounded)
+        static let headlineMedium = Font.system(size: 20, weight: .semibold, design: .rounded)
+        static let headlineSmall = Font.system(size: 17, weight: .semibold, design: .rounded)
+        
+        static let bodyLarge = Font.system(size: 17, weight: .regular)
+        static let bodyMedium = Font.system(size: 15, weight: .regular)
+        static let bodySmall = Font.system(size: 13, weight: .regular)
+        
+        static let labelLarge = Font.system(size: 15, weight: .medium)
+        static let labelMedium = Font.system(size: 13, weight: .medium)
+        static let labelSmall = Font.system(size: 11, weight: .medium)
+        
+        static let monoLarge = Font.system(size: 48, weight: .bold, design: .monospaced)
+        static let monoMedium = Font.system(size: 32, weight: .semibold, design: .monospaced)
+    }
+    
+    // MARK: - Animation
+    
+    enum Animation {
+        static let springQuick = SwiftUI.Animation.spring(duration: 0.3, bounce: 0.2)
+        static let springMedium = SwiftUI.Animation.spring(duration: 0.4, bounce: 0.25)
+        static let springBouncy = SwiftUI.Animation.spring(duration: 0.5, bounce: 0.35)
+        static let easeOut = SwiftUI.Animation.easeOut(duration: 0.25)
+        static let easeInOut = SwiftUI.Animation.easeInOut(duration: 0.3)
+    }
+}
+
+// MARK: - Glass Card Modifier
+
+struct GlassCardModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content
+            .background {
+                // Multi-layered background for depth
+                ZStack {
+                    // 1. Tint layer
+                    LiquidGlass.Colors.glassFill
+                    
+                    // 2. Blur material
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.thinMaterial) // Use thin for more substance
+                }
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10) // Deeper shadow
+            }
+            .overlay {
+                // Premium glass border with gradient
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.15),
+                                .white.opacity(0.05),
+                                .white.opacity(0.05),
+                                .white.opacity(0.02)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+    }
+}
+
+// MARK: - Glass Button Style
+
+struct GlassButtonStyle: ButtonStyle {
+    let style: ButtonVariant
+    
+    enum ButtonVariant {
+        case primary, secondary, income, expense
+        
+        var background: AnyShapeStyle {
+            switch self {
+            case .primary: return AnyShapeStyle(LiquidGlass.Colors.primaryGradient)
+            case .secondary: return AnyShapeStyle(.ultraThinMaterial)
+            case .income: return AnyShapeStyle(LiquidGlass.Colors.incomeGradient)
+            case .expense: return AnyShapeStyle(LiquidGlass.Colors.expenseGradient)
+            }
+        }
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(LiquidGlass.Typography.labelLarge)
+            .fontWeight(.semibold)
+            .foregroundStyle(.white)
+            .padding(.horizontal, LiquidGlass.Spacing.lg)
+            .padding(.vertical, LiquidGlass.Spacing.sm)
+            .background {
+                Capsule()
+                    .fill(style.background)
+                    .shadow(
+                        color: style == .income ? LiquidGlass.Colors.income.opacity(0.3) :
+                               style == .expense ? LiquidGlass.Colors.expense.opacity(0.3) :
+                               style == .primary ? LiquidGlass.Colors.primary.opacity(0.3) :
+                               .clear,
+                        radius: 10, y: 5
+                    )
+            }
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(LiquidGlass.Animation.springQuick, value: configuration.isPressed)
+    }
+}
+
+// MARK: - View Extensions
+
+extension View {
+    
+    /// Apply glass card background
+    func glassCard(cornerRadius: CGFloat = LiquidGlass.Radius.md) -> some View {
+        modifier(GlassCardModifier(cornerRadius: cornerRadius))
+    }
+    
+    /// Apply liquid glass background to entire view
+    func liquidGlassBackground() -> some View {
+        self.background {
+            ZStack {
+                LiquidGlass.Colors.backgroundPrimary
+                LiquidGlass.Colors.meshGradient
+                    .opacity(0.4) // Reduced opacity for subtlety
+            }
+            .ignoresSafeArea()
+        }
+    }
+    
+    /// Card shadow
+    func cardShadow() -> some View {
+        shadow(color: .black.opacity(0.2), radius: 16, y: 8)
+    }
+}
+
+// Color.init(hex:) is defined in Core/Extensions/Color+Hex.swift
+
+// MARK: - Animated Background
+
+struct AnimatedMeshBackground: View {
+    
+    private static let meshColors: [Color] = [
+        Color(hex: "0F1520"), Color(hex: "161D29"), Color(hex: "1D2536"),
+        Color(hex: "161D29"), Color(hex: "1D2536"), Color(hex: "161D29"),
+        Color(hex: "1D2536"), Color(hex: "161D29"), Color(hex: "0F1520")
+    ]
+    
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let phase = Float(timeline.date.timeIntervalSinceReferenceDate)
+            let offset1 = sin(phase * 0.2) * 0.1 // Slower
+            let offset2 = cos(phase * 0.15) * 0.1
+            
+            MeshGradient(
+                width: 3, height: 3,
+                points: [
+                    SIMD2<Float>(0.0, 0.0),
+                    SIMD2<Float>(0.5 + offset1, 0.0),
+                    SIMD2<Float>(1.0, 0.0),
+                    SIMD2<Float>(0.0, 0.5 + offset2),
+                    SIMD2<Float>(0.5, 0.5),
+                    SIMD2<Float>(1.0, 0.5 - offset1),
+                    SIMD2<Float>(0.0, 1.0),
+                    SIMD2<Float>(0.5 - offset2, 1.0),
+                    SIMD2<Float>(1.0, 1.0)
+                ],
+                colors: Self.meshColors
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
