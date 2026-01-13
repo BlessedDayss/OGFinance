@@ -88,16 +88,20 @@ struct MainTabView: View {
         .padding(.vertical, 12)
         .background {
             ZStack {
-                // Glass Background
+                // Glass Background - thinMaterial for more visible blur
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(.thinMaterial)
+                
+                // Subtle dark tint for better contrast
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color.black.opacity(0.15))
                 
                 // Inner glow
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.15),
                                 Color.clear
                             ],
                             startPoint: .top,
@@ -110,8 +114,8 @@ struct MainTabView: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.25),
-                                Color.white.opacity(0.05)
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.08)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
