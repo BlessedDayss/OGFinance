@@ -15,7 +15,6 @@ struct StatisticsView: View {
     @AppStorage("chartTimeFrame") private var chartType = 2
     @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var refreshID = UUID()
-    @State private var hasAppeared = false
     
     private var chartTypeString: String {
         switch chartType {
@@ -32,19 +31,14 @@ struct StatisticsView: View {
             OGDesign.Colors.backgroundPrimary
                 .ignoresSafeArea()
             
-            Group {
-                if transactions.isEmpty {
-                    emptyStateView
-                } else {
-                    mainContentView
-                }
+            if transactions.isEmpty {
+                emptyStateView
+            } else {
+                mainContentView
             }
         }
         .task {
             await loadTransactions()
-            withAnimation(.spring(duration: 0.3)) {
-                hasAppeared = true
-            }
         }
     }
     
@@ -114,24 +108,16 @@ struct StatisticsView: View {
             .padding(.horizontal, 30)
             .padding(.top, 20)
             .padding(.bottom, 20)
-            .offset(y: hasAppeared ? 0 : -20)
-            .opacity(hasAppeared ? 1 : 0)
             
             if chartType == 1 {
                 WeekGraphContentView(transactions: transactions)
                     .id(refreshID)
-                    .offset(y: hasAppeared ? 0 : 30)
-                    .opacity(hasAppeared ? 1 : 0)
             } else if chartType == 2 {
                 MonthGraphContentView(transactions: transactions)
                     .id(refreshID)
-                    .offset(y: hasAppeared ? 0 : 30)
-                    .opacity(hasAppeared ? 1 : 0)
             } else if chartType == 3 {
                 YearGraphContentView(transactions: transactions)
                     .id(refreshID)
-                    .offset(y: hasAppeared ? 0 : 30)
-                    .opacity(hasAppeared ? 1 : 0)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -633,7 +619,11 @@ struct InsightsBarChartView: View {
     private func shouldShowLabel(_ index: Int) -> Bool {
         switch type {
         case 1: return true
-        case 2: return index == 0 || (index + 1) % 7 == 0 || index == dates.count - 1
+        case 2:
+            // Show labels for day 1, 7, 14, 21, 28 and last day
+            let calendar = Calendar.current
+            let day = calendar.component(.day, from: dates[index])
+            return day == 1 || day == 7 || day == 14 || day == 21 || day == 28 || index == dates.count - 1
         case 3: return [0, 3, 6, 9].contains(index)
         default: return false
         }

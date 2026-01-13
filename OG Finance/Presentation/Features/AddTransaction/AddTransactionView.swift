@@ -863,26 +863,21 @@ struct AddTransactionView: View {
     // Helper to render category icon (handles both SF Symbols and emojis)
     @ViewBuilder
     private func categoryIcon(_ icon: String) -> some View {
-        // Known SF Symbols without dots (legacy icons)
-        let sfSymbolsWithoutDots = [
-            "laptopcomputer", "desktopcomputer", "macbook", "iphone", "ipad",
-            "airpods", "homepod", "applewatch", "appletv", "airplane",
-            "car", "bus", "tram", "bicycle", "scooter", "figure"
-        ]
+        // Check if first character is emoji
+        let isEmoji = icon.unicodeScalars.first?.properties.isEmoji == true && 
+                      icon.unicodeScalars.first?.properties.isEmojiPresentation == true
         
-        // If icon contains "." or is a known SF Symbol
-        if icon.contains(".") || sfSymbolsWithoutDots.contains(icon.lowercased()) {
-            Image(systemName: icon)
-        } else if icon.count <= 2 {
-            // Short strings are likely emojis
+        if isEmoji || icon.count <= 2 {
+            // It's an emoji - display as text
             Text(icon)
+                .font(.system(size: 20))
+        } else if UIImage(systemName: icon) != nil {
+            // It's a valid SF Symbol
+            Image(systemName: icon)
         } else {
-            // Longer strings without dots - try as SF Symbol first, fallback to text
-            if UIImage(systemName: icon) != nil {
-                Image(systemName: icon)
-            } else {
-                Text(icon)
-            }
+            // Fallback - try as text
+            Text(icon)
+                .font(.system(size: 20))
         }
     }
     

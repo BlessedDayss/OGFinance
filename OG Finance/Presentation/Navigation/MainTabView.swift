@@ -254,11 +254,8 @@ struct TabPressStyle: ButtonStyle {
 struct PlusRectangleStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(configuration.isPressed ? OGDesign.Colors.textTertiary : OGDesign.Colors.backgroundSecondary)
-            )
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }

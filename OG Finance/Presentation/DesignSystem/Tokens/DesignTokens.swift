@@ -12,33 +12,34 @@ import SwiftUI
 /// **Purpose:**
 /// Centralized design system for consistent UI across the app.
 /// All colors, spacing, typography, and other values are defined here.
+/// Supports both Light and Dark modes.
 enum OGDesign {
     
-    // MARK: - Colors
+    // MARK: - Colors (Adaptive for Light/Dark mode)
     
     enum Colors {
         static let primary = Color(hex: "7367F0")
         static let secondary = Color(hex: "A8AAAE")
         
-        // Semantic colors (Softer, less neon)
+        // Semantic colors (Same for both modes)
         static let income = Color(hex: "28C76F") // Emerald Green
         static let expense = Color(hex: "EA5455") // Soft Red
         static let warning = Color(hex: "FF9F43") // Orange
         
-        // Background colors (Deep Blue/Gray, not pitch black)
-        static let backgroundPrimary = Color(hex: "0F1520")
-        static let backgroundSecondary = Color(hex: "161D29")
-        static let backgroundTertiary = Color(hex: "1D2536")
+        // Background colors - Adaptive
+        static let backgroundPrimary = Color("BackgroundPrimary")
+        static let backgroundSecondary = Color("BackgroundSecondary")
+        static let backgroundTertiary = Color("BackgroundTertiary")
         
-        // Glass effect colors
-        static let glassFill = Color(hex: "1D2536").opacity(0.4)
-        static let glassBorder = Color.white.opacity(0.08)
-        static let glassHighlight = Color.white.opacity(0.1)
+        // Glass effect colors - Adaptive
+        static let glassFill = Color("GlassFill")
+        static let glassBorder = Color("GlassBorder")
+        static let glassHighlight = Color("GlassHighlight")
         
-        // Text colors
-        static let textPrimary = Color.white.opacity(0.95)
-        static let textSecondary = Color.white.opacity(0.7)
-        static let textTertiary = Color.white.opacity(0.4)
+        // Text colors - Adaptive
+        static let textPrimary = Color("TextPrimary")
+        static let textSecondary = Color("TextSecondary")
+        static let textTertiary = Color("TextTertiary")
         
         // Gradients
         static let incomeGradient = LinearGradient(
@@ -59,20 +60,23 @@ enum OGDesign {
             endPoint: .bottomTrailing
         )
         
-        static let meshGradient = MeshGradient(
-            width: 3,
-            height: 3,
-            points: [
-                [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-                [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
-                [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-            ],
-            colors: [
-                Color(hex: "0F1520"), Color(hex: "161D29"), Color(hex: "1D2536"),
-                Color(hex: "161D29"), Color(hex: "1D2536"), Color(hex: "161D29"),
-                Color(hex: "1D2536"), Color(hex: "161D29"), Color(hex: "0F1520")
-            ]
-        )
+        // Mesh Gradient - uses adaptive colors
+        static var meshGradient: MeshGradient {
+            MeshGradient(
+                width: 3,
+                height: 3,
+                points: [
+                    [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+                    [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
+                    [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+                ],
+                colors: [
+                    backgroundPrimary, backgroundSecondary, backgroundTertiary,
+                    backgroundSecondary, backgroundTertiary, backgroundSecondary,
+                    backgroundTertiary, backgroundSecondary, backgroundPrimary
+                ]
+            )
+        }
     }
     
     // MARK: - Spacing

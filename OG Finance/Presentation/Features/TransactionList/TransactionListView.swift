@@ -708,15 +708,14 @@ struct LogEmojiView: View {
     let emoji: String
     let color: String
     
-    // Known SF Symbols without dots
-    private let sfSymbolsWithoutDots = [
-        "laptopcomputer", "desktopcomputer", "macbook", "iphone", "ipad",
-        "airpods", "homepod", "applewatch", "appletv", "airplane",
-        "car", "bus", "tram", "bicycle", "scooter", "figure"
-    ]
+    // Check if emoji is actually an emoji character
+    private var isEmoji: Bool {
+        guard let firstScalar = emoji.unicodeScalars.first else { return false }
+        return firstScalar.properties.isEmoji && firstScalar.properties.isEmojiPresentation
+    }
     
     private var isSFSymbol: Bool {
-        emoji.contains(".") || sfSymbolsWithoutDots.contains(emoji.lowercased())
+        !isEmoji && emoji.count > 2 && UIImage(systemName: emoji) != nil
     }
     
     var body: some View {
@@ -743,15 +742,14 @@ struct LogEmojiView: View {
 struct CategoryIconView: View {
     let icon: String
     
-    // Known SF Symbols without dots
-    private let sfSymbolsWithoutDots = [
-        "laptopcomputer", "desktopcomputer", "macbook", "iphone", "ipad",
-        "airpods", "homepod", "applewatch", "appletv", "airplane",
-        "car", "bus", "tram", "bicycle", "scooter", "figure"
-    ]
+    // Check if icon is actually an emoji character
+    private var isEmoji: Bool {
+        guard let firstScalar = icon.unicodeScalars.first else { return false }
+        return firstScalar.properties.isEmoji && firstScalar.properties.isEmojiPresentation
+    }
     
     private var isSFSymbol: Bool {
-        icon.contains(".") || sfSymbolsWithoutDots.contains(icon.lowercased())
+        !isEmoji && icon.count > 2 && UIImage(systemName: icon) != nil
     }
     
     var body: some View {

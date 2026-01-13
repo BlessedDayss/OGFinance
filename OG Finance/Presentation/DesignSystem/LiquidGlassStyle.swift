@@ -11,32 +11,32 @@ import SwiftUI
 
 enum LiquidGlass {
     
-    // MARK: - Colors (Synced with OGDesign)
+    // MARK: - Colors (Synced with OGDesign - Adaptive)
     
     enum Colors {
-        // Primary
+        // Primary (same for both modes)
         static let primary = Color(hex: "7367F0")
         static let secondary = Color(hex: "A8AAAE")
         
-        // Semantic
+        // Semantic (same for both modes)
         static let income = Color(hex: "28C76F")
         static let expense = Color(hex: "EA5455")
         static let warning = Color(hex: "FF9F43")
         
-        // Backgrounds
-        static let backgroundPrimary = Color(hex: "0F1520")
-        static let backgroundSecondary = Color(hex: "161D29")
-        static let backgroundTertiary = Color(hex: "1D2536")
+        // Backgrounds - Adaptive
+        static let backgroundPrimary = OGDesign.Colors.backgroundPrimary
+        static let backgroundSecondary = OGDesign.Colors.backgroundSecondary
+        static let backgroundTertiary = OGDesign.Colors.backgroundTertiary
         
-        // Glass
-        static let glassFill = Color(hex: "1D2536").opacity(0.4)
-        static let glassBorder = Color.white.opacity(0.08)
-        static let glassHighlight = Color.white.opacity(0.1)
+        // Glass - Adaptive
+        static let glassFill = OGDesign.Colors.glassFill
+        static let glassBorder = OGDesign.Colors.glassBorder
+        static let glassHighlight = OGDesign.Colors.glassHighlight
         
-        // Text
-        static let textPrimary = Color.white.opacity(0.95)
-        static let textSecondary = Color.white.opacity(0.7)
-        static let textTertiary = Color.white.opacity(0.4)
+        // Text - Adaptive
+        static let textPrimary = OGDesign.Colors.textPrimary
+        static let textSecondary = OGDesign.Colors.textSecondary
+        static let textTertiary = OGDesign.Colors.textTertiary
         
         // Gradients
         static let primaryGradient = LinearGradient(
@@ -57,20 +57,10 @@ enum LiquidGlass {
             endPoint: .bottomTrailing
         )
         
-        // Mesh Gradient Background
-        static let meshGradient = MeshGradient(
-            width: 3, height: 3,
-            points: [
-                [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-                [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
-                [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-            ],
-            colors: [
-                Color(hex: "0F1520"), Color(hex: "161D29"), Color(hex: "1D2536"),
-                Color(hex: "161D29"), Color(hex: "1D2536"), Color(hex: "161D29"),
-                Color(hex: "1D2536"), Color(hex: "161D29"), Color(hex: "0F1520")
-            ]
-        )
+        // Mesh Gradient - Adaptive
+        static var meshGradient: MeshGradient {
+            OGDesign.Colors.meshGradient
+        }
     }
     
     // MARK: - Spacing

@@ -22,6 +22,9 @@ struct SettingsView: View {
     @AppStorage("showCents") var showCents: Bool = true
     @AppStorage("animatedCharts") var animatedCharts: Bool = true
     @AppStorage("biometricEnabled") var biometricEnabled: Bool = false
+    @AppStorage("dashboardStyle") var dashboardStyle: Int = 1  // 0: Minimal, 1: Standard, 2: Premium
+    @AppStorage("firstDayOfWeek") var firstDayOfWeek: Int = 1  // 1: Sunday, 2: Monday
+    @AppStorage("defaultChartType") var defaultChartType: Int = 2  // 1: Week, 2: Month, 3: Year
     
     // MARK: - State
     
@@ -58,6 +61,21 @@ struct SettingsView: View {
         case 2: return "Evenings"
         case 3: return "Custom"
         default: return "Mornings"
+        }
+    }
+    
+    private var dashboardStyleString: String {
+        switch dashboardStyle {
+        case 0: return "Minimal"
+        case 2: return "Premium"
+        default: return "Standard"
+        }
+    }
+    
+    private var firstDayOfWeekString: String {
+        switch firstDayOfWeek {
+        case 2: return "Monday"
+        default: return "Sunday"
         }
     }
     
@@ -153,6 +171,35 @@ struct SettingsView: View {
                                 namespace: animation
                             ) {
                                 animatedCharts.toggle()
+                            }
+                        }
+                        
+                        // DASHBOARD Section
+                        settingsSection(title: "DASHBOARD") {
+                            NavigationLink(destination: DashboardSettingsView()) {
+                                SettingsRowView(
+                                    icon: "square.grid.2x2.fill",
+                                    title: "Dashboard Style",
+                                    color: OGDesign.Colors.primary,
+                                    optionalText: dashboardStyleString
+                                )
+                            }
+                            
+                            NavigationLink(destination: InsightsSettingsView()) {
+                                SettingsRowView(
+                                    icon: "chart.bar.fill",
+                                    title: "Insights Settings",
+                                    color: Color.indigo
+                                )
+                            }
+                            
+                            NavigationLink(destination: FirstDayOfWeekSettingsView()) {
+                                SettingsRowView(
+                                    icon: "calendar",
+                                    title: "First Day of Week",
+                                    color: Color.teal,
+                                    optionalText: firstDayOfWeekString
+                                )
                             }
                         }
                         

@@ -21,6 +21,21 @@ struct OG_FinanceApp: App {
     
     private let container = DependencyContainer.shared
     
+    // MARK: - Appearance
+    
+    /// Color scheme setting: 0 = System, 1 = Light, 2 = Dark
+    @AppStorage("colorScheme") private var colorSchemeSetting: Int = 0
+    
+    // MARK: - Computed
+    
+    private var preferredScheme: ColorScheme? {
+        switch colorSchemeSetting {
+        case 1: return .light
+        case 2: return .dark
+        default: return nil // System
+        }
+    }
+    
     // MARK: - Initialization
     
     init() {
@@ -33,7 +48,7 @@ struct OG_FinanceApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(preferredScheme)
                 .modelContainer(container.modelContainer)
                 .task {
                     await container.initializeDefaults()
