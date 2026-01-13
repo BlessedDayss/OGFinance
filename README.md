@@ -9,7 +9,7 @@
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?style=for-the-badge&logo=swift&logoColor=white)](https://swift.org)
 [![iOS](https://img.shields.io/badge/iOS-26+-000000?style=for-the-badge&logo=apple&logoColor=white)](https://www.apple.com/ios)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid_Glass-007AFF?style=for-the-badge&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
-[![License](https://img.shields.io/badge/License-MIT-7367F0?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL%20v3-7367F0?style=for-the-badge)](LICENSE)
 
 <br>
 
