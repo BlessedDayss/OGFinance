@@ -101,16 +101,29 @@ final class DashboardViewModel {
     // MARK: - Notification Setup
     
     private func setupNotificationObservers() {
+        // Listen for transaction changes with optimistic UI update
         NotificationCenter.default.addObserver(
             forName: .transactionsChanged,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            // Instant refresh using DispatchQueue.main.async (like DIME)
-            DispatchQueue.main.async {
-                Task { @MainActor in
-                    await self?.refresh()
+        ) { [weak self] notification in
+            guard let self = self else { return }
+            
+            // OPTIMISTIC UPDATE: Apply balance change immediately (like DIME)
+            if let info = notification.object as? TransactionChangeInfo {
+                // Instant balance update without waiting for database
+                if info.type == .income {
+                    self.totalBalance += info.amount
+                    self.periodIncome += info.amount
+                } else {
+                    self.totalBalance -= info.amount
+                    self.periodExpenses += info.amount
                 }
+            }
+            
+            // Background refresh to sync with database (non-blocking)
+            Task { @MainActor in
+                await self.refresh()
             }
         }
     }

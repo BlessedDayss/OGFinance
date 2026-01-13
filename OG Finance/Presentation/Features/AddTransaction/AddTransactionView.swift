@@ -784,13 +784,14 @@ struct AddTransactionView: View {
                 print("✅ Transaction saved successfully!")
 
                 await MainActor.run {
+                    // Post notification with amount & type for INSTANT balance update
+                    TransactionNotificationCenter.shared.postTransactionAdded(
+                        amount: Decimal(price),
+                        type: income ? .income : .expense
+                    )
+                    
                     onSave()
                     dismiss()
-
-                    // Post notification AFTER all UI state transitions are complete
-                    // This prevents race conditions with DashboardViewModel refreshing
-                    // while the transaction sheet is still being dismissed
-                    TransactionNotificationCenter.shared.postTransactionAdded()
                 }
             } catch {
                 print("❌ Save Failed: \(error)")
