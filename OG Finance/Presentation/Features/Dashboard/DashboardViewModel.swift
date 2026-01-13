@@ -29,9 +29,10 @@ final class DashboardViewModel {
     
     // MARK: - State
     
+    var timeFrame: StatisticsPeriod = .month
     var totalBalance: Decimal = 0
-    var monthlyIncome: Decimal = 0
-    var monthlyExpenses: Decimal = 0
+    var periodIncome: Decimal = 0
+    var periodExpenses: Decimal = 0
     var recentTransactions: [Transaction] = []
     var statistics: Statistics?
     var categoryBreakdown: [CategoryStatistic] = []
@@ -51,19 +52,19 @@ final class DashboardViewModel {
     }
     
     var formattedIncome: String {
-        monthlyIncome.formatted(currencyCode: "USD")
+        periodIncome.formatted(currencyCode: "USD")
     }
     
     var formattedExpenses: String {
-        monthlyExpenses.formatted(currencyCode: "USD")
+        periodExpenses.formatted(currencyCode: "USD")
     }
     
-    var monthlyNetChange: Decimal {
-        monthlyIncome - monthlyExpenses
+    var periodNetChange: Decimal {
+        periodIncome - periodExpenses
     }
     
-    var isPositiveMonth: Bool {
-        monthlyNetChange >= 0
+    var isPositivePeriod: Bool {
+        periodNetChange >= 0
     }
     
     // MARK: - Initialization
@@ -92,6 +93,13 @@ final class DashboardViewModel {
     
     // MARK: - Public Methods
     
+    /// Change the current timeframe and reload data
+    func changePeriod(_ period: StatisticsPeriod) async {
+        guard timeFrame != period else { return }
+        timeFrame = period
+        await load()
+    }
+    
     /// Load all dashboard data
     func load() async {
         isLoading = true
@@ -101,15 +109,15 @@ final class DashboardViewModel {
             // Parallel loading for better performance
             async let balanceTask = accountRepository.totalBalance()
             async let transactionsTask = transactionRepository.fetchAll()
-            async let statisticsTask = getStatisticsUseCase.execute(for: .month)
+            async let statisticsTask = getStatisticsUseCase.execute(for: timeFrame)
             
             let (balance, transactions, stats) = try await (balanceTask, transactionsTask, statisticsTask)
             
             self.totalBalance = balance
             self.recentTransactions = Array(transactions.prefix(5))
             self.statistics = stats
-            self.monthlyIncome = stats.totalIncome
-            self.monthlyExpenses = stats.totalExpenses
+            self.periodIncome = stats.totalIncome
+            self.periodExpenses = stats.totalExpenses
             self.categoryBreakdown = stats.categoryBreakdown.filter { $0.type == .expense }
             self.dailyAverage = stats.dailyAverages.averageExpense
             

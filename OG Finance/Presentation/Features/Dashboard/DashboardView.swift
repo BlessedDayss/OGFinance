@@ -220,13 +220,10 @@ struct DashboardView: View {
 }
 
 struct LogInsightsSectionView: View {
-    let viewModel: DashboardViewModel
+    @Bindable var viewModel: DashboardViewModel
     
     @State private var showPeriodMenu = false
-    @State private var timeframe = 2 // 0: today, 1: week, 2: month, 3: year
     @State private var insightsType = 1 // 1: net, 2: income, 3: expense
-    
-    private let periodLabels = ["today", "this week", "this month", "this year"]
     
     private var headingText: String {
         switch insightsType {
@@ -239,10 +236,10 @@ struct LogInsightsSectionView: View {
     
     private var displayAmount: Decimal {
         switch insightsType {
-        case 1: return viewModel.monthlyNetChange
-        case 2: return viewModel.monthlyIncome
-        case 3: return viewModel.monthlyExpenses
-        default: return viewModel.monthlyNetChange
+        case 1: return viewModel.periodNetChange
+        case 2: return viewModel.periodIncome
+        case 3: return viewModel.periodExpenses
+        default: return viewModel.periodNetChange
         }
     }
     
@@ -258,7 +255,7 @@ struct LogInsightsSectionView: View {
                     Button {
                         showPeriodMenu = true
                     } label: {
-                        Text(periodLabels[timeframe])
+                        Text(viewModel.timeFrame.displayName.lowercased())
                             .font(.system(.body, design: .rounded).weight(.medium))
                             .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.9))
                             .padding(.vertical, 2)
@@ -274,7 +271,7 @@ struct LogInsightsSectionView: View {
                 AmountDisplayView(
                     amount: displayAmount,
                     isNetTotal: insightsType == 1,
-                    isPositive: viewModel.isPositiveMonth
+                    isPositive: viewModel.isPositivePeriod
                 )
             }
             .padding(7)
@@ -288,9 +285,9 @@ struct LogInsightsSectionView: View {
             }
             
             // Income/Expense breakdown (only for net total)
-            if viewModel.monthlyIncome != 0 && viewModel.monthlyExpenses != 0 && insightsType == 1 {
+            if viewModel.periodIncome != 0 && viewModel.periodExpenses != 0 && insightsType == 1 {
                 HStack(spacing: 8) {
-                    Text("+\(viewModel.monthlyIncome.formatted(currencyCode: "USD"))")
+                    Text("+\(viewModel.periodIncome.formatted(currencyCode: "USD"))")
                         .font(.system(.title3, design: .rounded).weight(.medium))
                         .foregroundStyle(OGDesign.Colors.income)
                         .lineLimit(1)
@@ -301,7 +298,7 @@ struct LogInsightsSectionView: View {
                         .frame(width: 2, height: 15)
                         .foregroundStyle(OGDesign.Colors.glassBorder)
                     
-                    Text("-\(viewModel.monthlyExpenses.formatted(currencyCode: "USD"))")
+                    Text("-\(viewModel.periodExpenses.formatted(currencyCode: "USD"))")
                         .font(.system(.title3, design: .rounded).weight(.medium))
                         .foregroundStyle(OGDesign.Colors.expense)
                         .lineLimit(1)
@@ -313,9 +310,9 @@ struct LogInsightsSectionView: View {
         .padding([.bottom, .horizontal], 20)
         .frame(height: 170)
         .confirmationDialog("Select Period", isPresented: $showPeriodMenu) {
-            ForEach(0..<4, id: \.self) { index in
-                Button(periodLabels[index]) {
-                    timeframe = index
+            ForEach(StatisticsPeriod.allCases.filter { $0 != .quarter && $0 != .allTime }, id: \.self) { period in
+                Button(period.displayName) {
+                    Task { await viewModel.changePeriod(period) }
                     HapticManager.shared.selection_()
                 }
             }
@@ -482,13 +479,13 @@ struct OrioTransactionRow: View {
 struct EmojiCategoryBox: View {
     let emoji: String
     let colorHex: String
-    
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Color(hex: colorHex).opacity(0.73))
-            
-            Image(systemName: emoji)
+
+            Text(emoji)
                 .font(.system(.title3))
                 .foregroundStyle(.white)
         }

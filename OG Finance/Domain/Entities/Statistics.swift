@@ -88,6 +88,7 @@ struct DailyAverages: Equatable, Sendable {
 
 /// Common time periods for statistics
 enum StatisticsPeriod: String, CaseIterable, Sendable {
+    case today
     case week
     case month
     case quarter
@@ -96,6 +97,7 @@ enum StatisticsPeriod: String, CaseIterable, Sendable {
     
     var displayName: String {
         switch self {
+        case .today: return "Today"
         case .week: return "This Week"
         case .month: return "This Month"
         case .quarter: return "This Quarter"
@@ -109,6 +111,11 @@ enum StatisticsPeriod: String, CaseIterable, Sendable {
         let calendar = Calendar.current
         
         switch self {
+        case .today:
+            let start = calendar.startOfDay(for: referenceDate)
+            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? referenceDate
+            return DateInterval(start: start, end: end)
+            
         case .week:
             let start = calendar.dateInterval(of: .weekOfYear, for: referenceDate)?.start ?? referenceDate
             return DateInterval(start: start, end: referenceDate)

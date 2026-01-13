@@ -427,13 +427,13 @@ struct TransactionRowView: View {
 struct TransactionEmojiBox: View {
     let emoji: String
     let colorHex: String
-    
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Color(hex: colorHex).opacity(0.73))
-            
-            Image(systemName: emoji)
+
+            Text(emoji)
                 .font(.system(.title3))
                 .foregroundStyle(.white)
         }

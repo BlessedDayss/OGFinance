@@ -183,7 +183,10 @@ struct NumericInputField: View {
         
         // Parse value and notify parent (debounced via the onChange)
         let value = Decimal(string: sanitized)
-        onValueChange(value)
+        // Prevent extremely large values that could cause overflow
+        let maxAllowedValue = Decimal(string: "999999999999.99")!
+        let safeValue = value.map { min($0, maxAllowedValue) }
+        onValueChange(safeValue)
     }
     
     private func updateDisplayText(_ text: String) {

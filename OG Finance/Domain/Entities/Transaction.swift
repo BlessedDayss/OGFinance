@@ -55,9 +55,10 @@ struct Transaction: Identifiable, Equatable, Hashable, Sendable {
         note: String = "",
         createdAt: Date = Date()
     ) {
-        // Ensure amount is always stored as positive
+        // Ensure amount is always stored as positive and within safe bounds
+        let maxAllowedAmount = Decimal(string: "999999999999.99")!
         self.id = id
-        self.amount = abs(amount)
+        self.amount = min(abs(amount), maxAllowedAmount)
         self.type = type
         self.categoryId = categoryId
         self.accountId = accountId

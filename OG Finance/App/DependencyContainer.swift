@@ -50,9 +50,22 @@ final class DependencyContainer {
             AccountEntity.self
         ])
         
+        // Ensure the Application Support directory exists
+        let fileManager = FileManager.default
+        let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let storeURL = appSupportURL.appendingPathComponent("default.store")
+        
+        do {
+            if !fileManager.fileExists(atPath: appSupportURL.path) {
+                try fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+            }
+        } catch {
+            print("Failed to create Application Support directory: \(error)")
+        }
+        
         let configuration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false,
+            url: storeURL,
             allowsSave: true
         )
         
