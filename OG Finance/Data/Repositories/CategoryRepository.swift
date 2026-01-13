@@ -105,7 +105,11 @@ actor CategoryRepository: CategoryRepositoryProtocol {
         let count = try modelContext.fetchCount(descriptor)
         
         // Only seed if no categories exist
-        guard count == 0 else { return }
+        guard count == 0 else {
+            // Migrate existing categories to use emojis if needed
+            try await migrateIconsToEmojis()
+            return
+        }
         
         // Insert all default categories
         for category in Category.allDefaults {
@@ -114,6 +118,95 @@ actor CategoryRepository: CategoryRepositoryProtocol {
         }
         
         try modelContext.save()
+    }
+    
+    /// Migrate old SF Symbol icons to emojis
+    private func migrateIconsToEmojis() async throws {
+        let descriptor = FetchDescriptor<CategoryEntity>()
+        let entities = try modelContext.fetch(descriptor)
+        
+        // Mapping from SF Symbol names to emojis
+        let iconMapping: [String: String] = [
+            // Expense categories
+            "cart.fill": "🛍️",
+            "cart": "🛍️",
+            "fork.knife": "🍔",
+            "fork.knife.circle.fill": "🍔",
+            "car.fill": "🚗",
+            "car": "🚗",
+            "gamecontroller.fill": "🎮",
+            "gamecontroller": "🎮",
+            "bolt.fill": "⚡",
+            "bolt": "⚡",
+            "heart.fill": "❤️",
+            "heart": "❤️",
+            "book.fill": "📚",
+            "book": "📚",
+            "cube.box.fill": "📦",
+            "cube.box": "📦",
+            "shippingbox.fill": "📦",
+            "shippingbox": "📦",
+            "house.fill": "🏠",
+            "house": "🏠",
+            "airplane": "✈️",
+            "tram.fill": "🚃",
+            "bus.fill": "🚌",
+            "figure.walk": "🚶",
+            "creditcard.fill": "💳",
+            "creditcard": "💳",
+            "bag.fill": "👜",
+            "bag": "👜",
+            
+            // Income categories
+            "briefcase.fill": "💼",
+            "briefcase": "💼",
+            "laptopcomputer": "💻",
+            "macbook": "💻",
+            "desktopcomputer": "💻",
+            "pc": "💻",
+            "chart.line.uptrend.xyaxis": "📈",
+            "chart.xyaxis.line": "📈",
+            "arrow.up.right": "📈",
+            "gift.fill": "🎁",
+            "gift": "🎁",
+            "giftcard.fill": "🎁",
+            "giftcard": "🎁",
+            "dollarsign.circle.fill": "💰",
+            "dollarsign.circle": "💰",
+            "dollarsign": "💰",
+            "banknote.fill": "💵",
+            "banknote": "💵",
+            "building.columns.fill": "🏦",
+            "building.columns": "🏦",
+            "building.2.fill": "🏢",
+            "building.2": "🏢",
+            
+            // Other common icons
+            "ellipsis.circle.fill": "📦",
+            "ellipsis.circle": "📦",
+            "questionmark.circle.fill": "❓",
+            "questionmark.circle": "❓"
+        ]
+        
+        var needsSave = false
+        
+        for entity in entities {
+            // Check if icon is an SF Symbol (contains ".")
+            if entity.icon.contains(".") {
+                if let emojiIcon = iconMapping[entity.icon] {
+                    entity.icon = emojiIcon
+                    needsSave = true
+                } else {
+                    // Default fallback for unknown SF Symbols
+                    entity.icon = "📦"
+                    needsSave = true
+                }
+            }
+        }
+        
+        if needsSave {
+            try modelContext.save()
+        }
     }
 }
 

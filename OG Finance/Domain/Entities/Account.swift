@@ -116,7 +116,8 @@ struct Account: Identifiable, Equatable, Hashable, Sendable {
 extension Account {
     
     /// Default account created for new users
-    static let defaultAccount = Account(
+    /// Note: Uses dynamic UUID - call createDefaultIfNeeded() to get/create account
+    nonisolated(unsafe) static let defaultAccount = Account(
         name: "Main Account",
         type: .checking,
         balance: 0,

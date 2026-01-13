@@ -73,11 +73,11 @@ struct Category: Identifiable, Equatable, Hashable, Sendable {
 
 extension Category {
     
-    /// Pre-defined expense categories
-    static let defaultExpenseCategories: [Category] = [
+    /// Pre-defined expense categories (using emojis like appDIME)
+    nonisolated(unsafe) static let defaultExpenseCategories: [Category] = [
         Category(
             name: "Food & Dining",
-            icon: "fork.knife",
+            icon: "🍔",
             colorHex: "FF6B6B",
             applicableTypes: [.expense],
             sortOrder: 0,
@@ -85,7 +85,7 @@ extension Category {
         ),
         Category(
             name: "Transportation",
-            icon: "car.fill",
+            icon: "🚗",
             colorHex: "4ECDC4",
             applicableTypes: [.expense],
             sortOrder: 1,
@@ -93,7 +93,7 @@ extension Category {
         ),
         Category(
             name: "Shopping",
-            icon: "bag.fill",
+            icon: "🛍️",
             colorHex: "9B59B6",
             applicableTypes: [.expense],
             sortOrder: 2,
@@ -101,7 +101,7 @@ extension Category {
         ),
         Category(
             name: "Entertainment",
-            icon: "gamecontroller.fill",
+            icon: "🎮",
             colorHex: "F39C12",
             applicableTypes: [.expense],
             sortOrder: 3,
@@ -109,7 +109,7 @@ extension Category {
         ),
         Category(
             name: "Bills & Utilities",
-            icon: "bolt.fill",
+            icon: "⚡",
             colorHex: "3498DB",
             applicableTypes: [.expense],
             sortOrder: 4,
@@ -117,7 +117,7 @@ extension Category {
         ),
         Category(
             name: "Health",
-            icon: "heart.fill",
+            icon: "❤️",
             colorHex: "E74C3C",
             applicableTypes: [.expense],
             sortOrder: 5,
@@ -125,7 +125,7 @@ extension Category {
         ),
         Category(
             name: "Education",
-            icon: "book.fill",
+            icon: "📚",
             colorHex: "1ABC9C",
             applicableTypes: [.expense],
             sortOrder: 6,
@@ -133,7 +133,7 @@ extension Category {
         ),
         Category(
             name: "Other",
-            icon: "ellipsis.circle.fill",
+            icon: "📦",
             colorHex: "95A5A6",
             applicableTypes: [.expense, .income],
             sortOrder: 99,
@@ -141,11 +141,11 @@ extension Category {
         )
     ]
     
-    /// Pre-defined income categories
-    static let defaultIncomeCategories: [Category] = [
+    /// Pre-defined income categories (using emojis like appDIME)
+    nonisolated(unsafe) static let defaultIncomeCategories: [Category] = [
         Category(
             name: "Salary",
-            icon: "briefcase.fill",
+            icon: "💼",
             colorHex: "00D09C",
             applicableTypes: [.income],
             sortOrder: 0,
@@ -153,7 +153,7 @@ extension Category {
         ),
         Category(
             name: "Freelance",
-            icon: "laptopcomputer",
+            icon: "💻",
             colorHex: "00B386",
             applicableTypes: [.income],
             sortOrder: 1,
@@ -161,7 +161,7 @@ extension Category {
         ),
         Category(
             name: "Investments",
-            icon: "chart.line.uptrend.xyaxis",
+            icon: "📈",
             colorHex: "2ECC71",
             applicableTypes: [.income],
             sortOrder: 2,
@@ -169,7 +169,7 @@ extension Category {
         ),
         Category(
             name: "Gifts",
-            icon: "gift.fill",
+            icon: "🎁",
             colorHex: "E91E63",
             applicableTypes: [.income],
             sortOrder: 3,
@@ -178,5 +178,5 @@ extension Category {
     ]
     
     /// All default categories combined
-    static let allDefaults: [Category] = defaultExpenseCategories + defaultIncomeCategories
+    nonisolated(unsafe) static let allDefaults: [Category] = defaultExpenseCategories + defaultIncomeCategories
 }

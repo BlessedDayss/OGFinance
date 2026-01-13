@@ -13,6 +13,7 @@ struct StatisticsView: View {
     @State private var transactions: [Transaction] = []
     @State private var showTimeMenu = false
     @AppStorage("chartTimeFrame") private var chartType = 2
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var refreshID = UUID()
     
     private var chartTypeString: String {
@@ -133,10 +134,11 @@ struct InsightsSingleGraphView: View {
     let selectedCategoryName: String
     let selectedCategoryAmount: Decimal
     
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var selectedDateAmount: Decimal = 0
     
     private var currencySymbol: String {
-        Locale.current.currencySymbol ?? "$"
+        CurrencyManager.symbol(for: currency)
     }
     
     private var dateString: String {
@@ -305,7 +307,7 @@ struct InsightsSingleGraphView: View {
             HStack(spacing: 11) {
                 InsightsSummaryBlock(
                     isIncome: true,
-                    amountString: totalIncome.formatted(currencyCode: "USD"),
+                    amountString: totalIncome.formatted(currencyCode: currency),
                     showOverlay: income && incomeFiltering
                 ) {
                     withAnimation {
@@ -321,7 +323,7 @@ struct InsightsSingleGraphView: View {
                 
                 InsightsSummaryBlock(
                     isIncome: false,
-                    amountString: totalExpenses.formatted(currencyCode: "USD"),
+                    amountString: totalExpenses.formatted(currencyCode: currency),
                     showOverlay: !income && incomeFiltering
                 ) {
                     withAnimation {
@@ -721,10 +723,11 @@ struct InsightsHorizontalCategoryChart: View {
     @Binding var chosenAmount: Decimal
     @Binding var chosenName: String
     
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var categories: [CategoryStatData] = []
     
     private var currencySymbol: String {
-        Locale.current.currencySymbol ?? "$"
+        CurrencyManager.symbol(for: currency)
     }
     
     var body: some View {

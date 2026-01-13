@@ -2,7 +2,7 @@
 //  TransactionListView.swift
 //  OG Finance
 //
-//  Created by Orkhan Gojayev on 07/01/2026.
+//  Created by OGTeam on 07/01/2026.
 //
 
 import SwiftUI
@@ -10,25 +10,43 @@ import SwiftUI
 struct TransactionListView: View {
     
     @State private var transactions: [Transaction] = []
+    @State private var categories: [Category] = []
     @State private var isLoading = true
-    @State private var filterType: TransactionType?
+    
+    // Currency
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
+    
+    // Search
     @State private var searchMode = false
-    @State private var searchQuery = ""
+    
+    // Filter
     @State private var showFilter = false
+    @State private var filterType: LogFilterType = .all
+    @State private var categoryFilter: Category?
+    @State private var incomeFilter = false
+    
+    // Insights
+    @State private var insightsTimeframe = 2 // 0: today, 1: week, 2: month, 3: year, 4: all
+    @State private var insightsType = 1 // 1: net, 2: income, 3: expense
+    @State private var showTimeframePicker = false
     
     @Environment(\.dismiss) private var dismiss
     
     private var filteredTransactions: [Transaction] {
         var result = transactions
         
-        if let filterType = filterType {
-            result = result.filter { $0.type == filterType }
-        }
-        
-        if !searchQuery.isEmpty {
-            result = result.filter { transaction in
-                transaction.note.localizedCaseInsensitiveContains(searchQuery)
+        switch filterType {
+        case .all:
+            break
+        case .category:
+            if let cat = categoryFilter {
+                result = result.filter { $0.categoryId == cat.id }
             }
+        case .type:
+            result = result.filter { ($0.type == .income) == incomeFilter }
+        case .recurring:
+            // Filter recurring transactions if needed
+            break
         }
         
         return result
@@ -41,6 +59,65 @@ struct TransactionListView: View {
         return grouped.sorted { $0.key > $1.key }
     }
     
+    // MARK: - Insights Calculations
+    
+    private var insightsDateRange: (start: Date, end: Date) {
+        let calendar = Calendar.current
+        let now = Date.now
+        
+        switch insightsTimeframe {
+        case 0: // Today
+            let start = calendar.startOfDay(for: now)
+            return (start, now)
+        case 1: // Week
+            let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
+            return (weekStart, now)
+        case 2: // Month
+            let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+            return (monthStart, now)
+        case 3: // Year
+            let yearStart = calendar.date(from: calendar.dateComponents([.year], from: now)) ?? now
+            return (yearStart, now)
+        default: // All time
+            return (Date.distantPast, now)
+        }
+    }
+    
+    private var insightsTransactions: [Transaction] {
+        let range = insightsDateRange
+        return transactions.filter { $0.date >= range.start && $0.date <= range.end }
+    }
+    
+    private var totalIncome: Decimal {
+        insightsTransactions.filter { $0.type == .income }.reduce(Decimal.zero) { $0 + $1.amount }
+    }
+    
+    private var totalExpense: Decimal {
+        insightsTransactions.filter { $0.type == .expense }.reduce(Decimal.zero) { $0 + $1.amount }
+    }
+    
+    private var netTotal: Decimal {
+        totalIncome - totalExpense
+    }
+    
+    private var displayedAmount: Decimal {
+        switch insightsType {
+        case 1: return netTotal
+        case 2: return totalIncome
+        default: return totalExpense
+        }
+    }
+    
+    private var insightsHeading: String {
+        switch insightsType {
+        case 1: return "Net total"
+        case 2: return "Earned"
+        default: return "Spent"
+        }
+    }
+    
+    private let timeframeOptions = ["today", "this week", "this month", "this year", "all time"]
+    
     var body: some View {
         if transactions.isEmpty && !isLoading {
             emptyStateView
@@ -48,6 +125,8 @@ struct TransactionListView: View {
             mainContentView
         }
     }
+    
+    // MARK: - Empty State
     
     private var emptyStateView: some View {
         VStack(spacing: 5) {
@@ -61,7 +140,7 @@ struct TransactionListView: View {
                 .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.8))
                 .multilineTextAlignment(.center)
             
-            Text("Add your first transaction\nto get started")
+            Text("Press the plus button\nto add your first entry")
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundStyle(OGDesign.Colors.textSecondary.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -72,25 +151,35 @@ struct TransactionListView: View {
         .background(OGDesign.Colors.backgroundPrimary)
     }
     
+    // MARK: - Main Content
+    
     private var mainContentView: some View {
         VStack(spacing: 0) {
+            // Header with search and filter
             headerBar
                 .padding(.horizontal, 25)
                 .padding(.top, 10)
             
-            if filterType != nil {
-                filterTagView
-                    .padding(.horizontal, 25)
-                    .padding(.top, 10)
-            }
+            // Filter stepper views
+            filterStepperView
+                .padding(.horizontal, 25)
+                .padding(.top, filterType == .all ? 0 : 18)
+                .frame(height: filterType == .all ? 0 : 50)
             
             ScrollView(showsIndicators: false) {
+                // Insights Section (only when filter is .all)
+                if filterType == .all {
+                    insightsSection
+                        .padding(.top, 10)
+                }
+                
+                // Transactions List
                 LazyVStack(spacing: 0) {
                     ForEach(groupedTransactions, id: \.0) { date, dayTransactions in
-                        TransactionDaySectionView(
+                        LogDaySectionView(
                             date: date,
                             transactions: dayTransactions,
-                            dayTotal: calculateDayTotal(dayTransactions),
+                            categories: categories,
                             onDelete: { transaction in
                                 deleteTransaction(transaction)
                             }
@@ -101,86 +190,83 @@ struct TransactionListView: View {
                 .padding(.bottom, 100)
             }
             .refreshable {
-                await loadTransactions()
+                await loadData()
             }
         }
         .background(OGDesign.Colors.backgroundPrimary)
         .navigationBarHidden(true)
         .fullScreenCover(isPresented: $searchMode) {
-            TransactionSearchView(transactions: transactions)
+            LogSearchView(transactions: transactions, categories: categories)
         }
         .task {
-            await loadTransactions()
+            await loadData()
+        }
+        .onAppear {
+            // Reload data when view appears (e.g., after dismissing add transaction sheet)
+            Task {
+                await loadData()
+            }
         }
     }
     
+    // MARK: - Header Bar
+    
     private var headerBar: some View {
-        HStack(alignment: .center) {
-            Text("Transactions")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(OGDesign.Colors.textPrimary)
+        HStack {
+            // Search Button
+            Button {
+                searchMode = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(.title2, design: .rounded).weight(.regular))
+                    .foregroundStyle(OGDesign.Colors.textSecondary)
+                    .padding(5)
+                    .contentShape(Rectangle())
+            }
             
             Spacer()
             
-            HStack(spacing: 8) {
-                Button {
-                    searchMode = true
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(OGDesign.Colors.textSecondary)
-                        .padding(10)
-                        .background(OGDesign.Colors.glassFill.opacity(0.5), in: Circle())
+            // Filter Tag
+            if filterType != .all {
+                filterTagView
+            }
+            
+            Spacer()
+            
+            // Filter Button
+            Menu {
+                ForEach(LogFilterType.allCases, id: \.self) { filter in
+                    Button {
+                        withAnimation(.easeIn(duration: 0.15)) {
+                            filterType = filter
+                        }
+                        HapticManager.shared.selection_()
+                    } label: {
+                        Label(filter.title, systemImage: filterType == filter ? "checkmark" : filter.icon)
+                    }
                 }
-                
-                Menu {
-                    Button {
-                        withAnimation(.easeIn(duration: 0.15)) {
-                            filterType = nil
-                        }
-                        HapticManager.shared.selection_()
-                    } label: {
-                        Label("All", systemImage: filterType == nil ? "checkmark" : "")
-                    }
-                    
-                    Button {
-                        withAnimation(.easeIn(duration: 0.15)) {
-                            filterType = .income
-                        }
-                        HapticManager.shared.selection_()
-                    } label: {
-                        Label("Income", systemImage: filterType == .income ? "checkmark" : "")
-                    }
-                    
-                    Button {
-                        withAnimation(.easeIn(duration: 0.15)) {
-                            filterType = .expense
-                        }
-                        HapticManager.shared.selection_()
-                    } label: {
-                        Label("Expense", systemImage: filterType == .expense ? "checkmark" : "")
-                    }
-                } label: {
-                    Image(systemName: filterType == nil ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(filterType == nil ? OGDesign.Colors.textSecondary : OGDesign.Colors.primary)
-                        .padding(10)
-                        .background(OGDesign.Colors.glassFill.opacity(0.5), in: Circle())
-                }
+            } label: {
+                Image(systemName: filterType == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                    .font(.system(.title2, design: .rounded).weight(.regular))
+                    .foregroundStyle(filterType == .all ? OGDesign.Colors.textSecondary : OGDesign.Colors.primary)
+                    .rotationEffect(.degrees(180))
+                    .padding(5)
+                    .contentShape(Rectangle())
             }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 10)
+        .frame(height: 50)
     }
+    
+    // MARK: - Filter Tag
     
     private var filterTagView: some View {
         HStack(spacing: 10) {
-            Text(filterType == .income ? "Income" : "Expense")
-                .font(.system(.subheadline, design: .rounded).weight(.medium))
+            Text(filterType.title)
+                .font(.system(.body, design: .rounded).weight(.medium))
             
             Button {
                 withAnimation(.easeIn(duration: 0.15)) {
-                    filterType = nil
+                    filterType = .all
                 }
             } label: {
                 Image(systemName: "xmark")
@@ -188,30 +274,129 @@ struct TransactionListView: View {
                     .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.7))
             }
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 12)
-        .background(OGDesign.Colors.glassFill, in: Capsule())
-        .overlay(Capsule().strokeBorder(OGDesign.Colors.glassBorder, lineWidth: 1))
+        .padding(4)
+        .padding(.horizontal, 6)
+        .background(OGDesign.Colors.glassFill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         .foregroundStyle(OGDesign.Colors.textPrimary)
     }
     
-    private func calculateDayTotal(_ transactions: [Transaction]) -> Decimal {
-        transactions.reduce(Decimal.zero) { result, transaction in
-            if transaction.type == .income {
-                return result + transaction.amount
-            } else {
-                return result - transaction.amount
-            }
+    // MARK: - Filter Stepper Views
+    
+    @ViewBuilder
+    private var filterStepperView: some View {
+        switch filterType {
+        case .all:
+            EmptyView()
+        case .category:
+            LogCategoryStepperView(
+                categoryFilter: $categoryFilter,
+                categories: categories
+            )
+        case .type:
+            LogIncomeToggleView(income: $incomeFilter)
+        case .recurring:
+            EmptyView()
         }
     }
     
-    private func loadTransactions() async {
+    // MARK: - Insights Section
+    
+    private var insightsSection: some View {
+        VStack(spacing: -3) {
+            VStack(spacing: 2) {
+                // Heading with timeframe picker
+                HStack(spacing: 4) {
+                    Text(insightsHeading)
+                        .font(.system(.body, design: .rounded).weight(.medium))
+                        .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.9))
+                    
+                    Menu {
+                        ForEach(0..<timeframeOptions.count, id: \.self) { index in
+                            Button {
+                                insightsTimeframe = index
+                            } label: {
+                                HStack {
+                                    Text(timeframeOptions[index])
+                                    if insightsTimeframe == index {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Text(timeframeOptions[insightsTimeframe])
+                            .padding(2)
+                            .padding(.horizontal, 6)
+                            .font(.system(.body, design: .rounded).weight(.medium))
+                            .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.9))
+                            .overlay(Capsule().stroke(OGDesign.Colors.glassBorder, lineWidth: 1.3))
+                    }
+                }
+                
+                // Amount Display
+                LogAmountView(
+                    amount: displayedAmount,
+                    isNetTotal: insightsType == 1,
+                    isPositive: netTotal >= 0
+                )
+            }
+            .padding(7)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Cycle through insights types
+                insightsType = insightsType == 3 ? 1 : insightsType + 1
+                HapticManager.shared.selection_()
+            }
+            
+            // Income/Expense breakdown (only for net total)
+            if insightsType == 1 && totalExpense > 0 && totalIncome > 0 {
+                HStack {
+                    Text("+\(totalIncome.formatted(currencyCode: currency))")
+                        .font(.system(.title2, design: .rounded).weight(.medium))
+                        .foregroundStyle(OGDesign.Colors.income)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    
+                    LogDottedLine()
+                        .stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                        .frame(width: 1.7, height: 15)
+                        .foregroundStyle(OGDesign.Colors.glassBorder)
+                    
+                    Text("-\(totalExpense.formatted(currencyCode: currency))")
+                        .font(.system(.title2, design: .rounded).weight(.medium))
+                        .foregroundStyle(OGDesign.Colors.expense)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .padding(.bottom, 13)
+            }
+        }
+        .padding([.bottom, .horizontal], 20)
+        .frame(height: 170)
+    }
+    
+    // MARK: - Data Loading
+    
+    private func loadData() async {
         isLoading = true
         
         do {
-            transactions = try await DependencyContainer.shared.transactionRepository.fetchAll()
+            async let transactionsTask = DependencyContainer.shared.transactionRepository.fetchAll()
+            async let categoriesTask = DependencyContainer.shared.categoryRepository.fetchAll()
+            
+            let (fetchedTransactions, fetchedCategories) = try await (transactionsTask, categoriesTask)
+            
+            transactions = fetchedTransactions
+            categories = fetchedCategories
+            
+            print("📋 TransactionListView loaded: \(transactions.count) transactions, \(categories.count) categories")
+            
+            // Set initial category filter if needed
+            if categoryFilter == nil && !categories.isEmpty {
+                categoryFilter = categories.first(where: { $0.applicableTypes.contains(.expense) })
+            }
         } catch {
-            print("Error loading transactions: \(error)")
+            print("❌ Error loading data: \(error)")
         }
         
         isLoading = false
@@ -230,205 +415,473 @@ struct TransactionListView: View {
     }
 }
 
-struct TransactionDaySectionView: View {
+// MARK: - Filter Type Enum
+
+enum LogFilterType: String, CaseIterable {
+    case all = "All"
+    case category = "Category"
+    case type = "Type"
+    case recurring = "Recurring"
+    
+    var title: String { rawValue }
+    
+    var icon: String {
+        switch self {
+        case .all: return "tray.full"
+        case .category: return "square.grid.2x2"
+        case .type: return "arrow.left.arrow.right"
+        case .recurring: return "repeat"
+        }
+    }
+}
+
+// MARK: - Log Amount View
+
+struct LogAmountView: View {
+    let amount: Decimal
+    let isNetTotal: Bool
+    let isPositive: Bool
+    
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
+    
+    private var currencySymbol: String {
+        CurrencyManager.symbol(for: currency)
+    }
+    
+    private var prefix: String {
+        guard isNetTotal else { return currencySymbol }
+        return isPositive ? "+\(currencySymbol)" : "-\(currencySymbol)"
+    }
+    
+    private var displayAmount: Decimal {
+        abs(amount)
+    }
+    
+    var body: some View {
+        HStack(alignment: .lastTextBaseline, spacing: 2) {
+            Text(prefix)
+                .font(.system(.largeTitle, design: .rounded))
+                .foregroundStyle(OGDesign.Colors.textSecondary)
+            
+            Text(displayAmount.formatted(.number.precision(.fractionLength(0...2))))
+                .font(.system(size: 50, weight: .regular, design: .rounded))
+                .foregroundStyle(OGDesign.Colors.textPrimary)
+        }
+        .minimumScaleFactor(0.5)
+        .lineLimit(1)
+    }
+}
+
+// MARK: - Dotted Line
+
+struct LogDottedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        return path
+    }
+}
+
+// MARK: - Day Section View
+
+struct LogDaySectionView: View {
     let date: Date
     let transactions: [Transaction]
-    let dayTotal: Decimal
+    let categories: [Category]
     let onDelete: (Transaction) -> Void
+    
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     
     private var dateText: String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
-            return String(localized: "Today")
+            return String(localized: "TODAY")
         } else if calendar.isDateInYesterday(date) {
-            return String(localized: "Yesterday")
+            return String(localized: "YESTERDAY")
         } else {
             let formatter = DateFormatter()
-            formatter.dateFormat = "dd MMMM"
-            return formatter.string(from: date)
+            let yearStart = calendar.date(from: calendar.dateComponents([.year], from: Date.now)) ?? Date.now
+            
+            if date < yearStart {
+                formatter.dateFormat = "EEE, d MMM yy"
+            } else {
+                formatter.dateFormat = "EEE, d MMM"
+            }
+            return formatter.string(from: date).uppercased()
+        }
+    }
+    
+    private var dayTotal: Decimal {
+        transactions.reduce(Decimal.zero) { result, transaction in
+            if transaction.type == .income {
+                return result + transaction.amount
+            } else {
+                return result - transaction.amount
+            }
         }
     }
     
     private var totalString: String {
-        dayTotal.formatted(currencyCode: "USD", showPositiveSign: true)
+        dayTotal.formatted(currencyCode: currency, showPositiveSign: true)
     }
     
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack(alignment: .firstTextBaseline) {
-                Text(dateText)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(OGDesign.Colors.textPrimary)
-                
-                Spacer()
-                
-                Text(totalString)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(OGDesign.Colors.textSecondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            .padding(.bottom, 12)
-            
-            // Rows
-            VStack(spacing: 0) {
-                ForEach(Array(transactions.enumerated()), id: \.element.id) { index, transaction in
-                    TransactionRowView(
-                        transaction: transaction,
-                        showDivider: index < transactions.count - 1,
-                        onDelete: { onDelete(transaction) }
-                    )
+            VStack(spacing: 4) {
+                HStack {
+                    Text(dateText)
+                    Spacer()
+                    Text(totalString)
+                        .layoutPriority(1)
                 }
+                .font(.system(.callout, design: .rounded).weight(.semibold))
+                .foregroundStyle(OGDesign.Colors.textSecondary)
+                
+                LogLine()
+                    .stroke(OGDesign.Colors.glassBorder, style: StrokeStyle(lineWidth: 1.3, lineCap: .round))
             }
-            .background(OGDesign.Colors.glassFill)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(OGDesign.Colors.glassBorder.opacity(0.5), lineWidth: 1)
-            )
+            .padding(.horizontal, 10)
+            .padding(.top, 10)
+            
+            // Transaction Rows
+            ForEach(transactions) { transaction in
+                LogTransactionRowView(
+                    transaction: transaction,
+                    category: categories.first(where: { $0.id == transaction.categoryId }),
+                    onDelete: { onDelete(transaction) }
+                )
+            }
         }
+        .padding(.bottom, 18)
     }
 }
 
-struct TransactionRowView: View {
+// MARK: - Line Shape
+
+struct LogLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
+    }
+}
+
+// MARK: - Transaction Row View
+
+struct LogTransactionRowView: View {
     let transaction: Transaction
-    let showDivider: Bool
+    let category: Category?
     let onDelete: () -> Void
     
-    @State private var category: Category?
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var offset: CGFloat = 0
     @State private var deleted: Bool = false
     @GestureState private var isDragging = false
     
     private var deletePopup: Bool {
-        abs(offset) > 60
+        abs(offset) > UIScreen.main.bounds.width * 0.2
     }
     
     private var deleteConfirm: Bool {
-        abs(offset) > 120
+        abs(offset) > UIScreen.main.bounds.width * 0.42
     }
     
     private var timeString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
+        formatter.dateFormat = "h:mm a"
         return formatter.string(from: transaction.date)
     }
     
     private var amountString: String {
-        let formatted = transaction.amount.formatted(currencyCode: "USD")
+        let formatted = transaction.amount.formatted(currencyCode: currency)
         return transaction.type == .income ? "+\(formatted)" : "-\(formatted)"
     }
     
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Swipe Actions Background
-            Color.red
-                .opacity(deleteConfirm ? 1 : (abs(Double(offset)) / 120.0))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.vertical, 1) // Tiny padding to fix bleeding
-            
-            Image(systemName: "trash.fill")
-                .font(.title3)
-                .foregroundStyle(.white)
-                .padding(.trailing, 30)
-                .scaleEffect(deleteConfirm ? 1.2 : 1.0)
-                .opacity(deletePopup ? 1 : 0)
-                .offset(x: 10 + offset * 0.1) // Parallax
+            // Delete indicator
+            Image(systemName: "xmark")
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .foregroundStyle(deleteConfirm ? OGDesign.Colors.expense : OGDesign.Colors.textSecondary)
+                .padding(5)
+                .background(
+                    deleteConfirm ? OGDesign.Colors.expense.opacity(0.23) : OGDesign.Colors.glassFill,
+                    in: Circle()
+                )
+                .scaleEffect(deleteConfirm ? 1.1 : 1)
+                .opacity(deleted ? 0 : 1)
+                .padding(.horizontal, 10)
+                .offset(x: 80)
+                .offset(x: max(-80, offset))
             
             // Main Content
-            VStack(spacing: 0) {
-                HStack(spacing: 16) {
-                    // Category Icon
-                    TransactionEmojiBox(
-                        emoji: category?.icon ?? "💰",
-                        colorHex: category?.colorHex ?? "#7367F0"
-                    )
-                    
-                    // Note & Time
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(transaction.note.isEmpty ? (category?.name ?? "Transaction") : transaction.note)
-                            .font(.system(size: 17, weight: .medium, design: .rounded))
-                            .foregroundStyle(OGDesign.Colors.textPrimary)
-                            .lineLimit(1)
-                        
-                        Text(transaction.note.isEmpty ? timeString : "\(category?.name ?? "General") • \(timeString)")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(OGDesign.Colors.textSecondary)
-                            .lineLimit(1)
-                    }
-                    
-                    Spacer()
-                    
-                    // Amount
-                    Text(amountString)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(transaction.type == .income ? OGDesign.Colors.income : OGDesign.Colors.textPrimary)
-                        .layoutPriority(1)
-                }
-                .padding(16)
-                .background(OGDesign.Colors.glassFill) // Opaque-ish background against red
+            HStack(spacing: 12) {
+                // Category Emoji Box
+                LogEmojiView(
+                    emoji: category?.icon ?? "💰",
+                    color: category?.colorHex ?? "#7367F0"
+                )
                 
-                if showDivider {
-                    Rectangle()
-                        .fill(OGDesign.Colors.glassBorder.opacity(0.5))
-                        .frame(height: 1)
-                        .padding(.leading, 76)
+                // Note and Time
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(transaction.note.isEmpty ? (category?.name ?? "Transaction") : transaction.note)
+                        .font(.system(.body, design: .rounded).weight(.medium))
+                        .foregroundStyle(OGDesign.Colors.textPrimary)
+                        .lineLimit(1)
+                    
+                    Text(timeString)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(OGDesign.Colors.textSecondary)
+                        .lineLimit(1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Amount
+                Text(amountString)
+                    .font(.system(.title3, design: .rounded).weight(.medium))
+                    .foregroundStyle(transaction.type == .income ? OGDesign.Colors.income : OGDesign.Colors.textPrimary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .layoutPriority(1)
             }
-            .contentShape(Rectangle())
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .contentShape(RoundedRectangle(cornerRadius: 10))
             .offset(x: offset)
-            .gesture(
-                DragGesture()
-                    .updating($isDragging) { _, state, _ in state = true }
-                    .onChanged { value in
-                        if value.translation.width < 0 {
+        }
+        .onChange(of: deletePopup) { _, newValue in
+            if newValue {
+                HapticManager.shared.light()
+            }
+        }
+        .onChange(of: deleteConfirm) { _, newValue in
+            if newValue {
+                HapticManager.shared.medium()
+            }
+        }
+        .animation(.easeInOut, value: deletePopup)
+        .simultaneousGesture(
+            DragGesture()
+                .updating($isDragging) { _, state, _ in
+                    state = true
+                }
+                .onChanged { value in
+                    if value.translation.width < 0 {
+                        withAnimation {
                             offset = value.translation.width
                         }
                     }
-                    .onEnded { _ in
-                        if deleteConfirm {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                offset = -UIScreen.main.bounds.width
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                onDelete()
-                            }
-                        } else {
-                            withAnimation(.spring) {
-                                offset = 0
-                            }
+                }
+                .onEnded { _ in
+                    if deleteConfirm {
+                        deleted = true
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            offset -= UIScreen.main.bounds.width
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            onDelete()
+                        }
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            offset = 0
                         }
                     }
-            )
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16)) // Ensure content doesn't spill
-        .task {
-            category = try? await DependencyContainer.shared.categoryRepository.fetch(byId: transaction.categoryId)
+                }
+        )
+        .onChange(of: isDragging) { _, newValue in
+            if !newValue && !deleted {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    offset = 0
+                }
+            }
         }
     }
 }
 
-struct TransactionEmojiBox: View {
-    let emoji: String
-    let colorHex: String
+// MARK: - Emoji View
 
+struct LogEmojiView: View {
+    let emoji: String
+    let color: String
+    
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(hex: colorHex).opacity(0.2))
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(hex: color).opacity(0.73))
             
-            Text(emoji)
-                .font(.system(size: 22))
+            // Handle both SF Symbols (contain ".") and emojis
+            if emoji.contains(".") {
+                Image(systemName: emoji)
+                    .font(.system(.title3))
+                    .foregroundStyle(.white)
+            } else {
+                Text(emoji)
+                    .font(.system(.title3))
+            }
         }
         .frame(width: 44, height: 44)
     }
 }
 
-struct TransactionSearchView: View {
+// MARK: - Category Stepper View
+
+struct LogCategoryStepperView: View {
+    @Binding var categoryFilter: Category?
+    let categories: [Category]
+    
+    @State private var income = false
+    
+    private var filteredCategories: [Category] {
+        categories.filter { category in
+            if income {
+                return category.applicableTypes.contains(.income)
+            } else {
+                return category.applicableTypes.contains(.expense)
+            }
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Income/Expense Toggle
+            Button {
+                withAnimation(.easeIn(duration: 0.15)) {
+                    income.toggle()
+                    categoryFilter = filteredCategories.first
+                }
+            } label: {
+                Image(systemName: income ? "plus" : "minus")
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .foregroundStyle(income ? OGDesign.Colors.income : OGDesign.Colors.expense)
+                    .padding(7)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .background(
+                        (income ? OGDesign.Colors.income : OGDesign.Colors.expense).opacity(0.23),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+            }
+            
+            // Category Scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                ScrollViewReader { value in
+                    HStack(spacing: 8) {
+                        ForEach(filteredCategories) { item in
+                            HStack(spacing: 5) {
+                                // Handle both SF Symbols and emojis
+                                Group {
+                                    if item.icon.contains(".") {
+                                        Image(systemName: item.icon)
+                                    } else {
+                                        Text(item.icon)
+                                    }
+                                }
+                                .font(.system(.footnote, design: .rounded).weight(.medium))
+                                
+                                Text(item.name)
+                                    .font(.system(.body, design: .rounded).weight(.medium))
+                            }
+                            .id(item.id)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .foregroundStyle(
+                                categoryFilter?.id == item.id
+                                    ? Color(hex: item.colorHex)
+                                    : OGDesign.Colors.textPrimary
+                            )
+                            .background(
+                                categoryFilter?.id == item.id
+                                    ? Color(hex: item.colorHex).opacity(0.3)
+                                    : OGDesign.Colors.backgroundPrimary,
+                                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            )
+                            .overlay {
+                                if categoryFilter?.id != item.id {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(OGDesign.Colors.glassBorder, lineWidth: 1.5)
+                                }
+                            }
+                            .onTapGesture {
+                                categoryFilter = item
+                                withAnimation {
+                                    value.scrollTo(item.id, anchor: .leading)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 36)
+    }
+}
+
+// MARK: - Income Toggle View
+
+struct LogIncomeToggleView: View {
+    @Binding var income: Bool
+    
+    @Namespace var animation
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            Text("Expense")
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .foregroundStyle(income == false ? OGDesign.Colors.textPrimary : OGDesign.Colors.textSecondary)
+                .padding(5.5)
+                .padding(.horizontal, 8)
+                .background {
+                    if income == false {
+                        Capsule()
+                            .fill(OGDesign.Colors.glassFill)
+                            .matchedGeometryEffect(id: "TAB1", in: animation)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeIn(duration: 0.15)) {
+                        income = false
+                    }
+                }
+            
+            Text("Income")
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .foregroundStyle(income == true ? OGDesign.Colors.textPrimary : OGDesign.Colors.textSecondary)
+                .padding(5.5)
+                .padding(.horizontal, 8)
+                .background {
+                    if income == true {
+                        Capsule()
+                            .fill(OGDesign.Colors.glassFill)
+                            .matchedGeometryEffect(id: "TAB1", in: animation)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeIn(duration: 0.15)) {
+                        income = true
+                    }
+                }
+        }
+        .padding(3)
+        .overlay(Capsule().stroke(OGDesign.Colors.glassBorder.opacity(0.4), lineWidth: 1.3))
+    }
+}
+
+// MARK: - Search View
+
+struct LogSearchView: View {
     @Environment(\.dismiss) private var dismiss
     
     let transactions: [Transaction]
+    let categories: [Category]
+    
     @State private var searchQuery = ""
     @FocusState private var isFocused: Bool
     
@@ -436,19 +889,34 @@ struct TransactionSearchView: View {
         guard !searchQuery.isEmpty else { return [] }
         
         return transactions.filter { transaction in
-            transaction.note.localizedCaseInsensitiveContains(searchQuery)
+            // Search by note
+            if transaction.note.localizedCaseInsensitiveContains(searchQuery) {
+                return true
+            }
+            // Search by category name
+            if let category = categories.first(where: { $0.id == transaction.categoryId }),
+               category.name.localizedCaseInsensitiveContains(searchQuery) {
+                return true
+            }
+            // Search by amount
+            if let searchAmount = Double(searchQuery),
+               NSDecimalNumber(decimal: transaction.amount).doubleValue == searchAmount {
+                return true
+            }
+            return false
         }
     }
     
     var body: some View {
         VStack(spacing: 18) {
+            // Search Bar
             HStack(spacing: 9) {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .font(.system(.body, design: .rounded))
                         .foregroundStyle(OGDesign.Colors.textSecondary.opacity(0.8))
                     
-                    TextField("Search by note", text: $searchQuery)
+                    TextField("Search entry by note", text: $searchQuery)
                         .font(.system(.body, design: .rounded))
                         .foregroundStyle(OGDesign.Colors.textPrimary)
                         .focused($isFocused)
@@ -476,6 +944,7 @@ struct TransactionSearchView: View {
                 }
             }
             
+            // Results
             ScrollView {
                 if searchQuery.isEmpty {
                     EmptyView()
@@ -499,9 +968,9 @@ struct TransactionSearchView: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredTransactions) { transaction in
-                            TransactionRowView(
+                            LogTransactionRowView(
                                 transaction: transaction,
-                                showDivider: false,
+                                category: categories.first(where: { $0.id == transaction.categoryId }),
                                 onDelete: {}
                             )
                         }

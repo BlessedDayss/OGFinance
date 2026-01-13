@@ -240,38 +240,3 @@ extension View {
 
 // Color.init(hex:) is defined in Core/Extensions/Color+Hex.swift
 
-// MARK: - Animated Background
-
-struct AnimatedMeshBackground: View {
-    
-    private static let meshColors: [Color] = [
-        Color(hex: "0F1520"), Color(hex: "161D29"), Color(hex: "1D2536"),
-        Color(hex: "161D29"), Color(hex: "1D2536"), Color(hex: "161D29"),
-        Color(hex: "1D2536"), Color(hex: "161D29"), Color(hex: "0F1520")
-    ]
-    
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            let phase = Float(timeline.date.timeIntervalSinceReferenceDate)
-            let offset1 = sin(phase * 0.2) * 0.1 // Slower
-            let offset2 = cos(phase * 0.15) * 0.1
-            
-            MeshGradient(
-                width: 3, height: 3,
-                points: [
-                    SIMD2<Float>(0.0, 0.0),
-                    SIMD2<Float>(0.5 + offset1, 0.0),
-                    SIMD2<Float>(1.0, 0.0),
-                    SIMD2<Float>(0.0, 0.5 + offset2),
-                    SIMD2<Float>(0.5, 0.5),
-                    SIMD2<Float>(1.0, 0.5 - offset1),
-                    SIMD2<Float>(0.0, 1.0),
-                    SIMD2<Float>(0.5 - offset2, 1.0),
-                    SIMD2<Float>(1.0, 1.0)
-                ],
-                colors: Self.meshColors
-            )
-        }
-        .ignoresSafeArea()
-    }
-}

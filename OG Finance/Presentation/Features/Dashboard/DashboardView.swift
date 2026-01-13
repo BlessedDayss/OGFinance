@@ -6,11 +6,117 @@
 
 import SwiftUI
 
+// MARK: - Shimmer Effect Modifier
+
+struct ShimmerEffect: ViewModifier {
+    @State private var phase: CGFloat = 0
+    let duration: Double
+    let bounce: Bool
+    
+    init(duration: Double = 2.0, bounce: Bool = true) {
+        self.duration = duration
+        self.bounce = bounce
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                GeometryReader { geometry in
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            .white.opacity(0.4),
+                            .clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geometry.size.width * 0.5)
+                    .offset(x: phase * geometry.size.width * 1.5 - geometry.size.width * 0.25)
+                    .blendMode(.overlay)
+                }
+                .mask(content)
+            }
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: duration)
+                    .repeatForever(autoreverses: bounce)
+                ) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+extension View {
+    func shimmer(duration: Double = 2.0, bounce: Bool = true) -> some View {
+        modifier(ShimmerEffect(duration: duration, bounce: bounce))
+    }
+}
+
+// MARK: - Glow Effect
+
+struct GlowModifier: ViewModifier {
+    let color: Color
+    let radius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: color.opacity(0.5), radius: radius / 2, y: 0)
+            .shadow(color: color.opacity(0.3), radius: radius, y: 0)
+    }
+}
+
+extension View {
+    func glow(color: Color, radius: CGFloat = 10) -> some View {
+        modifier(GlowModifier(color: color, radius: radius))
+    }
+}
+
+// MARK: - Animated Mesh Gradient Background
+
+struct AnimatedMeshBackground: View {
+    @State private var animateGradient = false
+    
+    var body: some View {
+        MeshGradient(
+            width: 3,
+            height: 3,
+            points: [
+                [0, 0], [0.5, 0], [1, 0],
+                [0, 0.5], [animateGradient ? 0.6 : 0.4, 0.5], [1, 0.5],
+                [0, 1], [0.5, 1], [1, 1]
+            ],
+            colors: [
+                OGDesign.Colors.backgroundPrimary,
+                OGDesign.Colors.backgroundSecondary,
+                OGDesign.Colors.backgroundPrimary,
+                OGDesign.Colors.backgroundSecondary,
+                OGDesign.Colors.primary.opacity(0.1),
+                OGDesign.Colors.backgroundSecondary,
+                OGDesign.Colors.backgroundPrimary,
+                OGDesign.Colors.backgroundSecondary,
+                OGDesign.Colors.backgroundPrimary
+            ]
+        )
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
+                animateGradient.toggle()
+            }
+        }
+    }
+}
+
 struct DashboardView: View {
     
     // MARK: - ViewModel
     
     @State private var viewModel = DashboardViewModel()
+    
+    // MARK: - Currency
+    
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     
     // MARK: - State
     
@@ -22,21 +128,23 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationStack {
-            if viewModel.recentTransactions.isEmpty && !viewModel.isLoading {
-                emptyStateView
-            } else {
-                mainContentView
+            ZStack {
+                // Animated background
+                AnimatedMeshBackground()
+                
+                if viewModel.recentTransactions.isEmpty && !viewModel.isLoading {
+                    emptyStateView
+                } else {
+                    mainContentView
+                }
             }
         }
-        .sheet(isPresented: $showAddTransaction) {
+        .fullScreenCover(isPresented: $showAddTransaction) {
             AddTransactionView(
-                transactionType: selectedTransactionType,
                 onSave: {
                     Task { await viewModel.refresh() }
                 }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .task {
             await viewModel.load()
@@ -49,26 +157,46 @@ struct DashboardView: View {
     // MARK: - Empty State View
     
     private var emptyStateView: some View {
-        VStack(spacing: 5) {
-            Image(systemName: "tray")
-                .font(.system(size: 60))
-                .foregroundStyle(OGDesign.Colors.textTertiary)
-                .padding(.bottom, 20)
+        VStack(spacing: 20) {
+            // Animated icon with glow
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [OGDesign.Colors.primary.opacity(0.2), .clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 80
+                        )
+                    )
+                    .frame(width: 160, height: 160)
+                
+                Image(systemName: "tray.fill")
+                    .font(.system(size: 60))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [OGDesign.Colors.textTertiary, OGDesign.Colors.textTertiary.opacity(0.5)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shimmer(duration: 3.0)
+            }
             
-            Text("Your Log is Empty")
-                .font(.system(.title2, design: .rounded).weight(.medium))
-                .foregroundStyle(OGDesign.Colors.textPrimary.opacity(0.8))
-                .multilineTextAlignment(.center)
-            
-            Text("Press the plus button\nto add your first entry")
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(OGDesign.Colors.textSecondary.opacity(0.7))
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Your Log is Empty")
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
+                    .foregroundStyle(OGDesign.Colors.textPrimary)
+                    .multilineTextAlignment(.center)
+                
+                Text("Tap the + button to add\nyour first transaction")
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .foregroundStyle(OGDesign.Colors.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, 30)
-        .frame(height: 250, alignment: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(OGDesign.Colors.backgroundPrimary)
     }
     
     // MARK: - Main Content View
@@ -105,7 +233,6 @@ struct DashboardView: View {
                 await viewModel.refresh()
             }
         }
-        .background(OGDesign.Colors.backgroundPrimary)
         .navigationBarHidden(true)
     }
     
@@ -147,39 +274,23 @@ struct DashboardView: View {
     private var quickActionsSection: some View {
         HStack(spacing: OGDesign.Spacing.sm) {
             // Add Income Button
-            Button {
+            QuickActionButton(
+                icon: "plus",
+                title: "Income",
+                color: OGDesign.Colors.income
+            ) {
                 selectedTransactionType = .income
                 showAddTransaction = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(.body, design: .rounded).weight(.semibold))
-                    Text("Income")
-                        .font(.system(.body, design: .rounded).weight(.medium))
-                }
-                .foregroundStyle(OGDesign.Colors.income)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-                .background(OGDesign.Colors.income.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
             }
             
-            // Add Expense Button
-            Button {
+            // Add Expense Button  
+            QuickActionButton(
+                icon: "minus",
+                title: "Expense",
+                color: OGDesign.Colors.expense
+            ) {
                 selectedTransactionType = .expense
                 showAddTransaction = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "minus")
-                        .font(.system(.body, design: .rounded).weight(.semibold))
-                    Text("Expense")
-                        .font(.system(.body, design: .rounded).weight(.medium))
-                }
-                .foregroundStyle(OGDesign.Colors.expense)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-                .background(OGDesign.Colors.expense.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
             }
         }
     }
@@ -222,6 +333,7 @@ struct DashboardView: View {
 struct LogInsightsSectionView: View {
     @Bindable var viewModel: DashboardViewModel
     
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var showPeriodMenu = false
     @State private var insightsType = 1 // 1: net, 2: income, 3: expense
     
@@ -271,7 +383,8 @@ struct LogInsightsSectionView: View {
                 AmountDisplayView(
                     amount: displayAmount,
                     isNetTotal: insightsType == 1,
-                    isPositive: viewModel.isPositivePeriod
+                    isPositive: viewModel.isPositivePeriod,
+                    currencyCode: currency
                 )
             }
             .padding(7)
@@ -287,7 +400,7 @@ struct LogInsightsSectionView: View {
             // Income/Expense breakdown (only for net total)
             if viewModel.periodIncome != 0 && viewModel.periodExpenses != 0 && insightsType == 1 {
                 HStack(spacing: 8) {
-                    Text("+\(viewModel.periodIncome.formatted(currencyCode: "USD"))")
+                    Text("+\(viewModel.periodIncome.formatted(currencyCode: currency))")
                         .font(.system(.title3, design: .rounded).weight(.medium))
                         .foregroundStyle(OGDesign.Colors.income)
                         .lineLimit(1)
@@ -298,7 +411,7 @@ struct LogInsightsSectionView: View {
                         .frame(width: 2, height: 15)
                         .foregroundStyle(OGDesign.Colors.glassBorder)
                     
-                    Text("-\(viewModel.periodExpenses.formatted(currencyCode: "USD"))")
+                    Text("-\(viewModel.periodExpenses.formatted(currencyCode: currency))")
                         .font(.system(.title3, design: .rounded).weight(.medium))
                         .foregroundStyle(OGDesign.Colors.expense)
                         .lineLimit(1)
@@ -321,13 +434,69 @@ struct LogInsightsSectionView: View {
 }
 
 
+// MARK: - Quick Action Button Component
+
+struct QuickActionButton: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                Text(title)
+                    .font(.system(.body, design: .rounded).weight(.medium))
+            }
+            .foregroundStyle(color)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(color.opacity(0.12))
+                    
+                    // Subtle glow border
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [color.opacity(0.3), color.opacity(0.1)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
+                }
+            }
+        }
+        .buttonStyle(QuickActionButtonStyle())
+    }
+}
+
+struct QuickActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 struct AmountDisplayView: View {
     let amount: Decimal
     let isNetTotal: Bool
     let isPositive: Bool
+    let currencyCode: String
+    
+    @State private var hasAppeared = false
     
     private var currencySymbol: String {
-        Locale.current.currencySymbol ?? "$"
+        CurrencyManager.symbol(for: currencyCode)
     }
     
     private var signedSymbol: String {
@@ -335,6 +504,13 @@ struct AmountDisplayView: View {
             return isPositive ? "+\(currencySymbol)" : "-\(currencySymbol)"
         }
         return currencySymbol
+    }
+    
+    private var amountColor: Color {
+        if isNetTotal {
+            return isPositive ? OGDesign.Colors.income : OGDesign.Colors.expense
+        }
+        return OGDesign.Colors.textPrimary
     }
     
     var body: some View {
@@ -350,6 +526,7 @@ struct AmountDisplayView: View {
         }
         .minimumScaleFactor(0.5)
         .lineLimit(1)
+        .shimmer(duration: 4.0)
     }
 }
 
@@ -370,6 +547,8 @@ struct TransactionDaySection: View {
     let transactions: [Transaction]
     let dayTotal: Decimal
     
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
+    
     private var dateText: String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
@@ -384,7 +563,7 @@ struct TransactionDaySection: View {
     }
     
     private var totalString: String {
-        let formatted = dayTotal.formatted(currencyCode: "USD", showPositiveSign: true)
+        let formatted = dayTotal.formatted(currencyCode: currency, showPositiveSign: true)
         return formatted
     }
     
@@ -422,6 +601,7 @@ struct TransactionDaySection: View {
 struct OrioTransactionRow: View {
     let transaction: Transaction
     
+    @AppStorage("currency") private var currency = CurrencyManager.defaultCurrency
     @State private var category: Category?
     @State private var offset: CGFloat = 0
     @GestureState private var isDragging = false
@@ -433,7 +613,7 @@ struct OrioTransactionRow: View {
     }
     
     private var amountString: String {
-        let formatted = transaction.amount.formatted(currencyCode: "USD")
+        let formatted = transaction.amount.formatted(currencyCode: currency)
         return transaction.type == .income ? "+\(formatted)" : "-\(formatted)"
     }
     
